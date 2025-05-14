@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>表單與調查列表</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 40px;
+    }
+
+    h2 {
+      color: #333;
+      margin-top: 40px;
+    }
+
+    .section {
+      background: #fff;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+      margin-bottom: 30px;
+    }
+
+    ul {
+      list-style: none;
+      padding-left: 0;
+    }
+
+    li {
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    a {
+      color: #007BFF;
+      text-decoration: none;
+      word-break: break-all;
+    }
+
+    button.copy-btn {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    button.copy-btn:hover {
+      background-color: #45a049;
+    }
+
+    .link-container {
+      flex-grow: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="section">
+    <h2>進行中表單</h2>
+    <ul>
+      <li>
+        <div class="link-container">
+          <a href="https://forms.gle/kdd8EXXq14PEdP1E9" target="_blank">
+2025 佛光山蘭陽別院《環保與心保》愛地球 淨灘暨家庭聯誼活動報名表</a>
+        </div>
+        <button class="copy-btn" onclick="copyLink('https://forms.gle/kdd8EXXq14PEdP1E9')">複製連結</button>
+      </li>
+      <!-- 你可以繼續加其他項目 -->
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>準備中表單</h2>
+    <ul>
+      <li>
+        <div class="link-container">
+          <a href="https://forms.gle/g2zNbAsLCvtBjsaV6" target="_blank">📣 2025佛光盃大學籃球邀請賽 觀賽行程公告</a>
+        </div>
+        <button class="copy-btn" onclick="copyLink('https://forms.gle/g2zNbAsLCvtBjsaV6')">複製連結</button>
+      </li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>進行中調查</h2>
+    <!--<ul>
+      <li>
+        <div class="link-container">
+          <a href="https://example.com/survey1" target="_blank">調查 1 - 使用者意見</a>
+        </div>
+        <button class="copy-btn" onclick="copyLink('https://example.com/survey1')">複製連結</button>
+      </li>
+    </ul>-->
+  </div>
+
+  <div class="section">
+    <h2>準備中調查</h2>
+    <ul>
+      <li>
+        <div class="link-container">
+          <a href="https://drive.google.com/drive/folders/1zB-HGJjJGnUbvFQUIiZQFsmKP7nIcWwx?usp=drive_link" target="_blank">分會活動上傳</a>
+        </div>
+        <button class="copy-btn" onclick="copyLink('https://drive.google.com/drive/folders/1zB-HGJjJGnUbvFQUIiZQFsmKP7nIcWwx?usp=drive_link')">複製連結</button>
+      </li>
+    </ul>
+  </div>
+
+  <script>
+    function copyLink(url) {
+      navigator.clipboard.writeText(url)
+        .then(() => alert('連結已複製到剪貼簿！'))
+        .catch(err => alert('複製失敗：' + err));
+    }
+  </script>
+
+</body>
+</html>
+

@@ -236,21 +236,53 @@ function setStatus(msg) {
   document.getElementById('status').textContent = msg; 
 }
 
-// 輔助函式：將 File 讀取為 Image 物件
-function loadImage(file) {
+// 輔助函式：載入圖片並透過 Canvas 縮放，以防記憶體爆掉 (Invalid string length)
+function loadImageAndResize(file, maxWidth = 1200, maxHeight = 1200) {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      const img = new Image();
-      img.onload = () => resolve({ img, format: file.type === 'image/png' ? 'PNG' : 'JPEG', name: file.name });
-      img.onerror = reject;
-      img.src = e.target.result;
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      
+      let width = img.width;
+      let height = img.height;
+      
+      // 如果圖片過大，計算縮放比例
+      if (width > maxWidth || height > maxHeight) {
+        const ratio = Math.min(maxWidth / width, maxHeight / height);
+        width = Math.round(width * ratio);
+        height = Math.round(height * ratio);
+      }
+      
+      // 繪製到 Canvas 進行壓縮
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      
+      // 確保背景為白 (如果原圖是透明 PNG，轉 JPEG 才不會變黑)
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, width, height);
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      const isPng = file.type === 'image/png';
+      const format = isPng ? 'PNG' : 'JPEG';
+      const mimeType = isPng ? 'image/png' : 'image/jpeg';
+      const quality = isPng ? undefined : 0.8; // JPEG 80% 畫質，兼顧清晰度與檔案大小
+      
+      const dataUrl = canvas.toDataURL(mimeType, quality);
+      resolve({ dataUrl, format, originalWidth: img.width, originalHeight: img.height, resizedWidth: width, resizedHeight: height });
     };
-    reader.readAsDataURL(file);
+    img.onerror = (err) => {
+      URL.revokeObjectURL(objectUrl);
+      reject(err);
+    };
+    img.src = objectUrl;
   });
 }
 
-// 計算等比例縮放與置中
+// 計算等比例縮放與置中 (依據原始圖片比例)
 function fitRect(imgW, imgH, cellW, cellH) {
   const scale = Math.min(cellW / imgW, cellH / imgH);
   const newW = imgW * scale;
@@ -264,15 +296,8 @@ async function generatePDF() {
   if (imageFiles.length === 0) return;
   const btn = document.getElementById('btn-process');
   btn.disabled = true;
-  setStatus('載入圖片中，請稍候...');
 
   try {
-    const images = [];
-    for (const f of imageFiles) {
-      images.push(await loadImage(f));
-    }
-
-    setStatus('產生 PDF 中...');
     const { jsPDF } = window.jspdf;
     
     // A4 大小 (points)
@@ -284,8 +309,6 @@ async function generatePDF() {
     const cellW = (pageW - margin * 2 - gutter) / 2;
     const cellH = (pageH - margin * 2 - gutter) / 2;
 
-    // 2x2 格子左上角座標 (jsPDF 原點在左上角)
-    // 順序：0=左上, 1=右上, 2=左下, 3=右下
     const cells = [
       { x: margin, y: margin },
       { x: margin + gutter + cellW, y: margin },
@@ -299,30 +322,43 @@ async function generatePDF() {
       format: 'a4'
     });
 
-    for (let i = 0; i < images.length; i++) {
-      // 每 4 張圖開新的一頁
+    // 逐一處理圖片，避免將所有大圖一次載入記憶體
+    for (let i = 0; i < imageFiles.length; i++) {
+      setStatus(`處理中... 第 ${i + 1} / ${imageFiles.length} 張`);
+      
       if (i > 0 && i % 4 === 0) {
         doc.addPage();
       }
 
-      const { img, format } = images[i];
+      // 載入並壓縮單張圖片
+      const { dataUrl, format, originalWidth, originalHeight } = await loadImageAndResize(imageFiles[i]);
+      
       const cellIndex = i % 4;
       const cell = cells[cellIndex];
 
-      const { w, h, xOff, yOff } = fitRect(img.width, img.height, cellW, cellH);
+      // 排版計算 (使用原始比例)
+      const { w, h, xOff, yOff } = fitRect(originalWidth, originalHeight, cellW, cellH);
       
       const drawX = cell.x + xOff;
       const drawY = cell.y + yOff;
 
-      doc.addImage(img, format, drawX, drawY, w, h);
+      // 將圖片加入 PDF
+      doc.addImage(dataUrl, format, drawX, drawY, w, h);
+      
+      // 讓瀏覽器有時間更新 UI 並釋放記憶體
+      await new Promise(resolve => setTimeout(resolve, 10));
     }
+
+    setStatus('產生 PDF 中，準備下載...');
+    // 等待一小段時間讓 UI 更新狀態
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     doc.save('output.pdf');
     setStatus('✅ 完成！PDF 已自動下載。');
     
   } catch (err) {
     console.error(err);
-    setStatus('❌ 處理過程中發生錯誤：' + err.message);
+    setStatus('❌ 處理過程中發生錯誤：' + (err.message || err));
   } finally {
     btn.disabled = false;
   }

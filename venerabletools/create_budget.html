@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>名牌排版與 PDF 產生器</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700&family=Noto+Sans+TC:wght@300;400;500&display=swap');
+  :root {
+    --primary:#a87a4f; --primary-mid:#d4a373; --primary-pale:#e8dcc4;
+    --bg-light:#fdfaf3; --bg-white:#ffffff; --text-dark:#3d2c1b;
+    --text-secondary: #6b4f35;
+    --border:#d4b896; --red:#c0392b; --shadow:rgba(168,122,79,.14);
+    --radius: 16px;
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    font-family:'Noto Sans TC',sans-serif;
+    background:var(--bg-light);
+    color:var(--text-dark);
+    min-height:100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 40px 20px;
+  }
+  
+  main {
+    width: 100%;
+    max-width: 800px;
+  }
+
+  .back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--primary);
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    transition: var(--transition);
+  }
+
+  .back-btn:hover {
+    color: var(--primary-mid);
+    transform: translateX(-5px);
+  }
+
+  .header {
+    margin-bottom: 40px;
+    text-align: center;
+  }
+
+  .header h1 {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 42px;
+    color: var(--primary);
+    margin-bottom: 8px;
+  }
+
+  .header p {
+    color: var(--text-secondary);
+    font-size: 18px;
+  }
+
+  .tool-card {
+    background: var(--bg-white);
+    border-radius: var(--radius);
+    padding: 40px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(168, 122, 79, 0.1);
+    margin-bottom: 40px;
+  }
+
+  .options-group {
+    margin-bottom: 24px;
+    padding: 16px;
+    background: var(--bg-light);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+
+  .radio-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--text-dark);
+  }
+
+  .radio-label input[type="radio"] {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--primary);
+    border-radius: 50%;
+    outline: none;
+    position: relative;
+    cursor: pointer;
+  }
+
+  .radio-label input[type="radio"]:checked::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 10px;
+    height: 10px;
+    background-color: var(--primary);
+    border-radius: 50%;
+  }
+
+  .drop-zone{border:2px dashed var(--border);border-radius:14px;background:#fff;padding:48px 24px;text-align:center;cursor:pointer;transition:all .2s;position:relative;margin-bottom:24px;}
+  .drop-zone:hover,.drop-zone.over{border-color:var(--primary);background:var(--bg-light);}
+  .drop-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+  .dz-icon{font-size:48px;margin-bottom:12px;}
+  .dz-label{font-size:18px;color:var(--primary);font-weight:600;letter-spacing:.5px;}
+  .dz-hint{font-size:14px;color:#888;margin-top:6px;}
+  
+  .file-list{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:24px;}
+  .chip{display:flex;align-items:center;gap:8px;background:var(--bg-light);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:14px;color:var(--primary);font-weight:500;}
+  .chip .remove{cursor:pointer;color:#999;font-size:16px;background:none;border:none;padding:0; margin-left: 4px;}
+  .chip .remove:hover{color:var(--red);}
+  
+  #status{font-size:14px;color:var(--red);min-height:24px;margin-bottom:12px; text-align: center;}
+  
+  .btn-process{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:16px;border:none;border-radius:12px;background:var(--primary);color:#fff;font-size:18px;font-family:'Noto Sans TC',sans-serif;font-weight:600;letter-spacing:1px;cursor:pointer;box-shadow:0 4px 12px var(--shadow);transition:var(--transition);}
+  .btn-process:hover:not(:disabled){background:var(--primary-mid);transform: translateY(-2px);box-shadow:0 6px 16px var(--shadow);}
+  .btn-process:disabled{background:#ccc;cursor:not-allowed;box-shadow:none;}
+
+  @media (max-width: 640px) {
+    .header h1 { font-size: 32px; }
+    .tool-card { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+  <main>
+    <a href="index.html" class="back-btn">
+      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+      </svg>
+      返回工具箱
+    </a>
+    <div class="header">
+      <h1>名牌轉 PDF 工具</h1>
+      <p>上傳圖片，自動排版成 A4 格式並轉為 PDF</p>
+    </div>
+
+    <div class="tool-card">
+      <div class="options-group">
+        <label class="radio-label">
+          <input type="radio" name="layout" value="4up_portrait" checked>
+          直式四張 (直式 A4，一頁會有四張名牌)
+        </label>
+      </div>
+
+      <div class="drop-zone" id="drop-zone">
+        <input type="file" accept=".png,.jpg,.jpeg" multiple id="file-input" onchange="addFiles(this.files)">
+        <div class="dz-icon">🖼️</div>
+        <div class="dz-label">點擊選擇或拖曳 PNG / JPG 圖片</div>
+        <div class="dz-hint">可一次上傳多張圖片，會自動依檔名排序排版</div>
+      </div>
+      
+      <div class="file-list" id="file-list"></div>
+      <div id="status"></div>
+      
+      <button class="btn-process" id="btn-process" disabled onclick="generatePDF()">
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+        產生並下載 PDF
+      </button>
+    </div>
+  </main>
+
+<script>
+let imageFiles = [];
+
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); addFiles(e.dataTransfer.files); });
+
+function addFiles(fileList) {
+  Array.from(fileList).forEach(f => {
+    // 檢查檔名與格式
+    if (!f.type.match('image/(jpeg|png)')) return;
+    if (imageFiles.find(x => x.name === f.name)) return;
+    imageFiles.push(f);
+  });
+  
+  // 依據檔名中的數字進行自然排序
+  imageFiles.sort((a, b) => {
+    const numA = parseInt(a.name.replace(/\D/g, '')) || Number.MAX_SAFE_INTEGER;
+    const numB = parseInt(b.name.replace(/\D/g, '')) || Number.MAX_SAFE_INTEGER;
+    if (numA === numB) {
+      return a.name.localeCompare(b.name);
+    }
+    return numA - numB;
+  });
+
+  renderChips(); 
+  updateBtn();
+  document.getElementById('file-input').value = '';
+}
+
+function renderChips() {
+  const list = document.getElementById('file-list');
+  list.innerHTML = '';
+  imageFiles.forEach((f, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.innerHTML = `
+      <span>${f.name}</span>
+      <button class="remove" onclick="removeFile(${i})">✕</button>`;
+    list.appendChild(chip);
+  });
+}
+
+function removeFile(i) {
+  imageFiles.splice(i, 1);
+  renderChips(); 
+  updateBtn();
+}
+
+function updateBtn() {
+  document.getElementById('btn-process').disabled = imageFiles.length === 0;
+}
+
+function setStatus(msg) { 
+  document.getElementById('status').textContent = msg; 
+}
+
+// 輔助函式：將 File 讀取為 Image 物件
+function loadImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => resolve({ img, format: file.type === 'image/png' ? 'PNG' : 'JPEG', name: file.name });
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// 計算等比例縮放與置中
+function fitRect(imgW, imgH, cellW, cellH) {
+  const scale = Math.min(cellW / imgW, cellH / imgH);
+  const newW = imgW * scale;
+  const newH = imgH * scale;
+  const xOff = (cellW - newW) / 2;
+  const yOff = (cellH - newH) / 2;
+  return { w: newW, h: newH, xOff, yOff };
+}
+
+async function generatePDF() {
+  if (imageFiles.length === 0) return;
+  const btn = document.getElementById('btn-process');
+  btn.disabled = true;
+  setStatus('載入圖片中，請稍候...');
+
+  try {
+    const images = [];
+    for (const f of imageFiles) {
+      images.push(await loadImage(f));
+    }
+
+    setStatus('產生 PDF 中...');
+    const { jsPDF } = window.jspdf;
+    
+    // A4 大小 (points)
+    const pageW = 595.28;
+    const pageH = 841.89;
+    const margin = 20;
+    const gutter = 10;
+
+    const cellW = (pageW - margin * 2 - gutter) / 2;
+    const cellH = (pageH - margin * 2 - gutter) / 2;
+
+    // 2x2 格子左上角座標 (jsPDF 原點在左上角)
+    // 順序：0=左上, 1=右上, 2=左下, 3=右下
+    const cells = [
+      { x: margin, y: margin },
+      { x: margin + gutter + cellW, y: margin },
+      { x: margin, y: margin + gutter + cellH },
+      { x: margin + gutter + cellW, y: margin + gutter + cellH }
+    ];
+
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'pt',
+      format: 'a4'
+    });
+
+    for (let i = 0; i < images.length; i++) {
+      // 每 4 張圖開新的一頁
+      if (i > 0 && i % 4 === 0) {
+        doc.addPage();
+      }
+
+      const { img, format } = images[i];
+      const cellIndex = i % 4;
+      const cell = cells[cellIndex];
+
+      const { w, h, xOff, yOff } = fitRect(img.width, img.height, cellW, cellH);
+      
+      const drawX = cell.x + xOff;
+      const drawY = cell.y + yOff;
+
+      doc.addImage(img, format, drawX, drawY, w, h);
+    }
+
+    doc.save('output.pdf');
+    setStatus('✅ 完成！PDF 已自動下載。');
+    
+  } catch (err) {
+    console.error(err);
+    setStatus('❌ 處理過程中發生錯誤：' + err.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>

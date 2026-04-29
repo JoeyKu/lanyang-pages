@@ -33,9 +33,9 @@ function renderCornerOptions() {
         return `
             <div class="corner-item">
                 <input type="radio" name="corner" id="${id}" value="${path}" ${index === 0 ? 'checked' : ''}>
-                <label for="${id}" class="text-center">
-                    <img src="${path}" alt="${name}" class="img-thumbnail d-block mx-auto mb-1" style="width: 80px; height: 80px;">
-                    <span class="small">${name}</span>
+                <label for="${id}">
+                    <img src="${path}" alt="${name}">
+                    <span>${name}</span>
                 </label>
             </div>
         `;
@@ -50,7 +50,7 @@ async function updateStatus(message, progress) {
 
 async function initPyodide() {
     try {
-        statusContainer.classList.remove('d-none');
+        statusContainer.classList.add('active');
         await updateStatus('正在載入 Pyodide 核心...', 10);
         pyodide = await loadPyodide();
         await updateStatus('正在安裝必要套件 (pandas, openpyxl, reportlab)...', 30);
@@ -64,11 +64,11 @@ async function initPyodide() {
         await updateStatus('系統就緒', 100);
         generateBtn.disabled = false;
         btnText.innerText = '產生獎項卡片';
-        setTimeout(() => { statusContainer.classList.add('d-none'); }, 2000);
+        setTimeout(() => { statusContainer.classList.remove('active'); }, 2000);
     } catch (error) {
         console.error(error);
-        statusMsg.innerHTML = `<span class="text-danger">初始化失敗: ${error.message}</span>`;
-        progressBar.classList.add('bg-danger');
+        statusMsg.innerHTML = `<span style="color: var(--red);">初始化失敗: ${error.message}</span>`;
+        progressBar.style.background = 'var(--red)';
     }
 }
 
@@ -84,9 +84,9 @@ async function generatePDF() {
     const eventName = eventNameInput.value || "獎項卡片";
 
     generateBtn.disabled = true;
-    btnSpinner.classList.remove('d-none');
+    btnSpinner.classList.add('active');
     btnText.innerText = '正在產生 PDF...';
-    statusContainer.classList.remove('d-none');
+    statusContainer.classList.add('active');
     await updateStatus('讀取檔案中...', 20);
 
     try {
@@ -152,33 +152,51 @@ async function generatePDF() {
         center_x = lx + lw / 2
         text_max_w = lw - 40 # Increased horizontal padding for text
 
+        # 安全取得欄位值，並處理 nan 與浮點數
+        def get_val(key):
+            val = row.get(key, "")
+            if pd.isna(val): return ""
+            if isinstance(val, float) and val.is_integer():
+                return str(int(val))
+            return str(val).strip()
+            
+        prize = get_val('獎項')
+        number = get_val('編號')
+        unit_text = get_val('單位名稱')
+        name_info = get_val('職稱姓名')
+
+        full_prize_text = f"{prize}{number}"
+        footer = f"{name_info} 敬贈".strip() if name_info else "敬贈"
+
         if LAYOUT == "3x2":
             # Adjust positions for 3x2 to avoid corners and look better
             # Title - Moved down more to avoid top corners
             draw_centred_text_auto_size(c, EVENT_NAME, center_x, ly + lh - 65, text_max_w, 11)
             # Prize and Number
-            full_prize_text = f"{row['獎項']}{row['編號']}"
             draw_centred_text_auto_size(c, full_prize_text, center_x, ly + lh * 0.55, text_max_w, 52)
             # Unit Name
-            unit_text = str(row['單位名稱'])
             draw_centred_text_auto_size(c, unit_text, center_x, ly + lh * 0.35, text_max_w, 24)
             # Name and Giver - Moved up to avoid bottom corners
-            name_info = str(row['職稱姓名']) if pd.notna(row['職稱姓名']) and row['職稱姓名'] != "" else ""
-            footer = f"{name_info} 敬贈".strip()
             draw_centred_text_auto_size(c, footer, center_x, ly + 65, text_max_w, 18)
         else:
             # Original 2x2 layout settings
             draw_centred_text_auto_size(c, EVENT_NAME, center_x, ly + lh - 40, text_max_w, 15)
-            full_prize_text = f"{row['獎項']}{row['編號']}"
             draw_centred_text_auto_size(c, full_prize_text, center_x, ly + lh * 0.52, text_max_w, 75)
-            unit_text = str(row['單位名稱'])
             draw_centred_text_auto_size(c, unit_text, center_x, ly + lh * 0.3, text_max_w, 36)
-            name_info = str(row['職稱姓名']) if pd.notna(row['職稱姓名']) and row['職稱姓名'] != "" else ""
-            footer = f"{name_info} 敬贈".strip()
             draw_centred_text_auto_size(c, footer, center_x, ly + lh * 0.15, text_max_w, 28)
 
     def main():
         df = pd.read_excel(EXCEL_FILE)
+        
+        # 清理欄位名稱 (去除頭尾空白)
+        df.columns = df.columns.astype(str).str.strip()
+        
+        # 檢查是否至少有一些必要的欄位
+        required_cols = ['獎項', '編號', '單位名稱']
+        missing_cols = [col for col in required_cols if col not in df.columns]
+        if missing_cols:
+            raise Exception("Excel 缺少必要欄位：" + "、".join(missing_cols) + "。目前檔案包含的欄位有：" + "、".join(df.columns))
+            
         pagesize = landscape(A4)
         width, height = pagesize
         c = canvas.Canvas(OUTPUT_PDF, pagesize=pagesize)
@@ -245,13 +263,13 @@ async function generatePDF() {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         await updateStatus('完成！', 100);
-        setTimeout(() => statusContainer.classList.add('d-none'), 3000);
+        setTimeout(() => statusContainer.classList.remove('active'), 3000);
     } catch (error) {
         console.error(error);
         alert('產生失敗: ' + error.message);
     } finally {
         generateBtn.disabled = false;
-        btnSpinner.classList.add('d-none');
+        btnSpinner.classList.remove('active');
         btnText.innerText = '產生獎項卡片';
     }
 }

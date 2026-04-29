@@ -1,87 +1,177 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>獎項卡片產生器</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700&family=Noto+Sans+TC:wght@300;400;500&display=swap');
+        
+        :root {
+            --primary: #a87a4f;
+            --primary-mid: #d4a373;
+            --primary-pale: #e8dcc4;
+            --bg-light: #fdfaf3;
+            --bg-white: #ffffff;
+            --text-dark: #3d2c1b;
+            --text-secondary: #6b4f35;
+            --border: #d4b896;
+            --red: #c0392b;
+            --shadow: rgba(168, 122, 79, .14);
+            --radius: 16px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background: var(--bg-light);
+            color: var(--text-dark);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 40px 20px;
+        }
+
+        main { width: 100%; max-width: 800px; }
+
+        .back-btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            color: var(--primary); text-decoration: none; font-size: 16px;
+            font-weight: 600; margin-bottom: 20px; transition: var(--transition);
+        }
+        .back-btn:hover { color: var(--primary-mid); transform: translateX(-5px); }
+
+        .header { margin-bottom: 40px; text-align: center; }
+        .header h1 { font-family: 'Noto Serif TC', serif; font-size: 42px; color: var(--primary); margin-bottom: 8px; }
+        .header p { color: var(--text-secondary); font-size: 18px; }
+
+        .tool-card {
+            background: var(--bg-white); border-radius: var(--radius); padding: 40px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); border: 1px solid rgba(168, 122, 79, 0.1); margin-bottom: 40px;
+        }
+
+        .input-group { margin-bottom: 24px; }
+        label { font-weight: 600; color: var(--primary); font-size: 15px; margin-bottom: 8px; display: block; }
+        
+        input[type="text"], input[type="file"] {
+            width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border);
+            font-size: 16px; font-family: inherit; background: #fff; transition: var(--transition);
+        }
+        input:focus { outline: none; border-color: var(--primary-mid); box-shadow: 0 0 0 4px rgba(212, 163, 115, 0.1); }
+        .hint { font-size: 13px; color: #888; margin-top: 6px; }
+
+        .radio-group { display: flex; gap: 20px; }
+        .radio-label { display: flex; align-items: center; gap: 8px; font-size: 16px; cursor: pointer; color: var(--text-dark); font-weight: 500; }
+        .radio-label input[type="radio"] {
+            appearance: none; width: 20px; height: 20px; border: 2px solid var(--primary);
+            border-radius: 50%; outline: none; position: relative; cursor: pointer; margin: 0;
+        }
+        .radio-label input[type="radio"]:checked::after {
+            content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 10px; height: 10px; background-color: var(--primary); border-radius: 50%;
+        }
+
+        /* 花邊選項樣式 */
+        .corner-options { display: flex; flex-wrap: wrap; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-light); }
+        .corner-item { position: relative; cursor: pointer; }
+        .corner-item input[type="radio"] { position: absolute; opacity: 0; width: 0; height: 0; }
+        .corner-item label {
+            display: flex; flex-direction: column; align-items: center; padding: 8px; margin: 0;
+            border: 2px solid transparent; border-radius: 8px; transition: var(--transition); cursor: pointer;
+        }
+        .corner-item img { width: 80px; height: 80px; background: #fff; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 6px; object-fit: contain; }
+        .corner-item span { font-size: 12px; color: var(--text-dark); font-weight: normal; }
+        .corner-item input[type="radio"]:checked + label { border-color: var(--primary); background: var(--primary-pale); }
+        .corner-item label:hover { background: #f0f0f0; }
+
+        .btn-process {
+            display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 16px;
+            border: none; border-radius: 12px; background: var(--primary); color: #fff; font-size: 18px;
+            font-family: 'Noto Sans TC', sans-serif; font-weight: 600; letter-spacing: 1px; cursor: pointer;
+            box-shadow: 0 4px 12px var(--shadow); transition: var(--transition); margin-top: 32px;
+        }
+        .btn-process:hover:not(:disabled) { background: var(--primary-mid); transform: translateY(-2px); box-shadow: 0 6px 16px var(--shadow); }
+        .btn-process:disabled { background: #ccc; cursor: not-allowed; box-shadow: none; }
+
+        .status-container { margin-top: 24px; padding: 16px; background: var(--primary-pale); border-radius: 10px; color: var(--text-dark); display: none; }
+        .status-container.active { display: block; }
+        .progress-bar-bg { background: #fff; border-radius: 6px; height: 10px; margin-top: 10px; overflow: hidden; border: 1px solid var(--border); }
+        .progress-bar-fill { background: var(--primary); height: 100%; width: 0%; transition: width 0.3s; }
+        .spinner {
+            display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid #fff; border-radius: 50%; animation: spin 1s linear infinite; display: none;
+        }
+        .spinner.active { display: inline-block; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        @media (max-width: 640px) {
+            .header h1 { font-size: 32px; }
+            .tool-card { padding: 24px; }
+        }
+    </style>
 </head>
-
 <body>
-    <div class="container py-5">
-        <div class="row justify-content-center">
-            <div class="col-md-8">
-                <div class="card shadow">
-                    <div class="card-header bg-primary text-white text-center">
-                        <h3 class="mb-0">獎項卡片產生器</h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-4">
-                            <label for="event-name" class="form-label fw-bold">1. 活動名稱</label>
-                            <input type="text" id="event-name" class="form-control" placeholder="例如：佛光山蘭陽別院2025義工歲末聯誼會">
-                        </div>
+    <main>
+        <a href="../index.html" class="back-btn">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+            </svg>
+            返回工具箱
+        </a>
+        <div class="header">
+            <h1>獎項卡片產生器</h1>
+            <p>上傳 Excel 名單，自動排版成抽獎或獎項卡片 PDF</p>
+        </div>
 
-                        <div class="mb-4">
-                            <label class="form-label fw-bold">2. 選擇花邊樣式</label>
-                            <div id="corner-options" class="d-flex flex-wrap gap-3 p-2 border rounded">
-                                <!-- 由 JS 動態產生 -->
-                            </div>
-                        </div>
+        <div class="tool-card">
+            <div class="input-group">
+                <label for="event-name">1. 活動名稱</label>
+                <input type="text" id="event-name" placeholder="例如：佛光山蘭陽別院2025義工歲末聯誼會">
+            </div>
 
-                        <div class="mb-4">
-                            <label class="form-label fw-bold">2. 選擇排版方式</label>
-                            <div class="d-flex gap-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="layout" id="layout-2x2"
-                                        value="2x2" checked>
-                                    <label class="form-check-label" for="layout-2x2">
-                                        一頁 2x2 張 (較大)
-                                    </label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="layout" id="layout-3x2"
-                                        value="3x2">
-                                    <label class="form-check-label" for="layout-3x2">
-                                        一頁 3x2 張 (較多)
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
+            <div class="input-group">
+                <label>2. 選擇花邊樣式</label>
+                <div id="corner-options" class="corner-options">
+                    <!-- 由 JS 動態產生 -->
+                </div>
+            </div>
 
-                        <div class="mb-4">
-                            <label for="excel-file" class="form-label fw-bold">3. 上傳 Excel 檔案 (.xlsx)</label>
-                            <input type="file" id="excel-file" class="form-control" accept=".xlsx">
-                            <div class="form-text">請確保格式與 data.xlsx 一致（包含「獎項」、「編號」、「單位名稱」、「職稱姓名」）</div>
-                        </div>
+            <div class="input-group">
+                <label>3. 選擇排版方式</label>
+                <div class="radio-group">
+                    <label class="radio-label">
+                        <input type="radio" name="layout" value="2x2" checked> 一頁 2x2 張 (較大)
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="layout" value="3x2"> 一頁 3x2 張 (較多)
+                    </label>
+                </div>
+            </div>
 
-                        <div class="d-grid gap-2">
-                            <button id="generate-btn" class="btn btn-success btn-lg" disabled>
-                                <span id="btn-spinner" class="spinner-border spinner-border-sm d-none"
-                                    role="status"></span>
-                                <span id="btn-text">系統初始化中...</span>
-                            </button>
-                        </div>
+            <div class="input-group">
+                <label for="excel-file">4. 上傳 Excel 檔案 (.xlsx)</label>
+                <input type="file" id="excel-file" accept=".xlsx">
+                <div class="hint">請確保格式與 data.xlsx 一致（包含「獎項」、「編號」、「單位名稱」、「職稱姓名」）</div>
+            </div>
 
-                        <div id="status-container" class="mt-4 d-none">
-                            <div class="alert alert-info">
-                                <div id="status-msg">正在準備環境...</div>
-                                <div class="progress mt-2" style="height: 10px;">
-                                    <div id="progress-bar"
-                                        class="progress-bar progress-bar-striped progress-bar-animated"
-                                        role="progressbar" style="width: 0%"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+            <button id="generate-btn" class="btn-process" disabled>
+                <span id="btn-spinner" class="spinner"></span>
+                <span id="btn-text">系統初始化中...</span>
+            </button>
+
+            <div id="status-container" class="status-container">
+                <div id="status-msg" style="font-weight: 500;">正在準備環境...</div>
+                <div class="progress-bar-bg">
+                    <div id="progress-bar" class="progress-bar-fill"></div>
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 
     <script src="script.js"></script>
 </body>
-
 </html>

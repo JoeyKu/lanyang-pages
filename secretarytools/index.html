@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>秘書工具箱 - 蘭陽別院</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Outfit:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #a87a4f;
+            --accent-color: #d4a373;
+            --bg-color: #fdfaf3;
+            --card-bg: #ffffff;
+            --text-main: #3d2c1b;
+            --text-secondary: #a87a4f;
+            --shadow: 0 10px 25px rgba(168, 122, 79, 0.1);
+            --radius: 16px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 50px 40px;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(168, 122, 79, 0.1);
+            text-align: center;
+        }
+
+        .header {
+            margin-bottom: 40px;
+        }
+
+        .header .icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .header h1 {
+            font-family: 'Outfit', 'Noto Sans TC', sans-serif;
+            font-size: 32px;
+            color: var(--primary-color);
+            font-weight: 600;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: var(--accent-color);
+            font-size: 16px;
+            opacity: 0.8;
+        }
+
+        .link-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .link-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            background-color: var(--primary-color);
+            color: white;
+            text-decoration: none;
+            padding: 18px 24px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 500;
+            transition: var(--transition);
+            box-shadow: 0 4px 12px rgba(168, 122, 79, 0.15);
+        }
+
+        .link-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .link-btn.secondary {
+            background-color: transparent;
+            color: var(--primary-color);
+            border: 2px solid var(--primary-color);
+            box-shadow: none;
+            margin-top: 10px;
+        }
+
+        @media (hover: hover) {
+            .link-btn:hover {
+                background-color: var(--accent-color);
+                transform: translateY(-3px);
+                box-shadow: 0 8px 20px rgba(168, 122, 79, 0.2);
+            }
+            .link-btn.secondary:hover {
+                background-color: var(--bg-color);
+                color: var(--accent-color);
+                border-color: var(--accent-color);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 40px 20px;
+            }
+            .header h1 {
+                font-size: 28px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <span class="icon">💼</span>
+            <h1>秘書工具箱</h1>
+            <p>蘭陽別院行政與秘書作業工具</p>
+        </div>
+        
+        <div class="link-container">
+            <a href="nameListCreator.html" class="link-btn">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                姓名產生器
+            </a>
+            <a href="convertMeetingWord.html" class="link-btn">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                轉換會議文件
+            </a>
+            <a href="replaceMeetingSlide.html" class="link-btn">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+                產生會議簡報
+            </a>
+            <a href="../index.html" class="link-btn secondary">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                返回首頁
+            </a>
+        </div>
+    </div>
+</body>
+
+</html>

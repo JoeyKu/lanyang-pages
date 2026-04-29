@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>產生會議簡報</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Outfit:wght@400;600&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide.js"></script>
+    <style>
+        :root {
+            --primary-color: #a87a4f;
+            --accent-color: #d4a373;
+            --bg-color: #fdfaf3;
+            --sidebar-bg: #3d2c1b;
+            --sidebar-text: #fdfaf3;
+            --card-bg: #ffffff;
+            --text-main: #3d2c1b;
+            --text-secondary: #6b4f35;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            --radius: 16px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            font-size: 20px;
+            line-height: 1.75;
+            padding: 40px 20px;
+        }
+
+        main {
+            width: 100%;
+            max-width: 900px;
+            flex-grow: 0;
+        }
+
+        .header {
+            margin-bottom: 40px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 42px;
+            color: var(--primary-color);
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--primary-color);
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            transition: var(--transition);
+        }
+
+        .back-btn:hover {
+            color: var(--accent-color);
+            transform: translateX(-5px);
+        }
+
+        .tool-card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 40px;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(168, 122, 79, 0.1);
+        }
+
+        .section-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin: 32px 0 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid rgba(168, 122, 79, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title:first-of-type {
+            margin-top: 0;
+        }
+
+        .input-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .input-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            font-weight: 600;
+            color: var(--primary-color);
+            font-size: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-size: 17px;
+            font-family: inherit;
+            background: #fafafa;
+            transition: var(--transition);
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            background: #fff;
+            box-shadow: 0 0 0 4px rgba(212, 163, 115, 0.12);
+        }
+
+        .file-drop-area {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 24px 20px;
+            text-align: center;
+            background: #fafafa;
+            transition: var(--transition);
+            position: relative;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+
+        .file-drop-area.dragover {
+            border-color: var(--primary-color);
+            background: rgba(168, 122, 79, 0.05);
+        }
+
+        .file-drop-area input[type="file"] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .file-drop-text {
+            font-size: 16px;
+            color: var(--text-secondary);
+            pointer-events: none;
+        }
+
+        .file-name {
+            margin-top: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--primary-color);
+            pointer-events: none;
+        }
+
+        .actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 28px;
+        }
+
+        button {
+            padding: 14px 28px;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 18px;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background-color: var(--accent-color);
+            transform: translateY(-2px);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .error {
+            color: #e74c3c;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 36px;
+            height: 36px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg)
+            }
+
+            100% {
+                transform: rotate(360deg)
+            }
+        }
+
+        @media (max-width:900px) {
+            main {
+                max-width: 100%;
+            }
+
+            .input-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width:640px) {
+            main {
+                padding: 0;
+            }
+
+            .header h1 {
+                font-size: 28px;
+            }
+
+            .tool-card {
+                padding: 20px;
+            }
+
+            .input-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main>
+        <a href="index.html" class="back-btn">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+            </svg>
+            返回工具箱
+        </a>
+        <div class="header">
+            <h1>產生會議簡報</h1>
+            <p>自動轉換分會簡報格式，替換年月份與宣講指導，並可合併報告與提案檔案。</p>
+        </div>
+
+        <div class="tool-card">
+            <form id="slideForm">
+
+                <div class="section-title">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    基本資訊
+                </div>
+
+                <div class="input-row">
+                    <div class="input-group">
+                        <label for="year">年份</label>
+                        <input type="number" id="year" name="year" placeholder="例如：115" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="month">月份</label>
+                        <input type="number" id="month" name="month" placeholder="例如：4" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="speaker">宣講員</label>
+                        <input type="text" id="speaker" name="speaker" placeholder="例如：OOO (三好分會)" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="supervisor">上級指導</label>
+                        <input type="text" id="supervisor" name="supervisor" placeholder="例如：OOO 督導" required>
+                    </div>
+                </div>
+
+                <div class="section-title">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    檔案上傳
+                </div>
+
+                <div class="input-group">
+                    <label for="templateFile">公版簡報 (<span style="color:#e74c3c;">.pptx</span>)</label>
+                    <div id="templateStatus" style="font-size:15px; margin-bottom:8px; color:var(--text-secondary);">
+                        連線中，檢查伺服器公版檔案...
+                    </div>
+                    <div class="file-drop-area">
+                        <div class="file-drop-text">點擊或拖放檔案至此 (僅限 .pptx)</div>
+                        <div class="file-name"></div>
+                        <input type="file" id="templateFile" name="templateFile" accept=".pptx">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="reportFile">分會工作報告 (<span style="color:#e74c3c;">.pptx</span>) <span
+                            style="font-size:13px; font-weight:normal; color:#888;">[選填] 會自動插入在「工作報告」之後</span></label>
+                    <div class="file-drop-area">
+                        <div class="file-drop-text">點擊或拖放檔案至此 (不支援 .ppt)</div>
+                        <div class="file-name"></div>
+                        <input type="file" id="reportFile" name="reportFile" accept=".pptx">
+                    </div>
+                </div>
+                
+		<div class="input-group">
+                    <label for="docFile">分會會議文件 (.docx) <span
+                            style="font-size:13px; font-weight:normal; color:#888;">[選填] 會自動在「提案」匯入</span></label>
+                    <div class="file-drop-area">
+                        <div class="file-drop-text">點擊或拖放檔案至此</div>
+                        <div class="file-name"></div>
+                        <input type="file" id="docFile" name="docFile" accept=".docx">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="proposalFile">聯合月例會投影片 (<span style="color:#e74c3c;">.pptx</span>)<span
+                            style="font-size:13px; font-weight:normal; color:#888;">[選填] 從「提案討論」至「臨時動議」擷取</span></label>
+                    <div class="file-drop-area">
+                        <div class="file-drop-text">點擊或拖放檔案至此 (不支援 .ppt)</div>
+                        <div class="file-name"></div>
+                        <input type="file" id="proposalFile" name="proposalFile" accept=".pptx">
+                    </div>
+                </div>
+
+
+                <div class="actions">
+                    <button type="button" id="submitBtn" class="btn-primary" onclick="submitForm()" disabled>
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        系統初始化中...
+                    </button>
+                </div>
+            </form>
+
+            <div id="loading" style="display:none; text-align:center; margin-top:20px;">
+                <div class="spinner"></div>
+                <p style="margin-top:10px; color:var(--text-secondary);">簡報處理中，請稍候...</p>
+            </div>
+
+            <div id="alertBox" style="display:none; text-align:center; margin-top:20px; font-size:17px;"></div>
+
+            <div id="summarySection" style="display:none; margin-top:40px;">
+                <div class="section-title">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    提案文字摘要
+                </div>
+                <div class="tool-card" style="padding: 24px;">
+                    <textarea id="summaryText" readonly
+                        style="width: 100%; height: 300px; font-family: 'Noto Sans TC', monospace; font-size: 16px; padding: 15px; border-radius: 8px; border: 1px solid #ddd; background: #f9f9f9; resize: vertical; margin-bottom: 20px;"></textarea>
+                    <div style="display: flex; justify-content: flex-end;">
+                        <button type="button" id="copyBtn" class="btn-primary" onclick="copyToClipboard()"
+                            style="background-color: var(--accent-color);">
+                            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m-7 10h7m-7-3h7m-7-3h7" />
+                            </svg>
+                            複製文字
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+
+
+    <script>
+        let pyodide;
+        let pyScript = ''; 
+        let preloadedTemplateBuffer = null;
+        const submitBtn = document.getElementById('submitBtn');
+        const loadingDiv = document.getElementById('loading');
+        const alertBox = document.getElementById('alertBox');
+
+        const LS_FIELDS = ['year', 'month', 'speaker', 'supervisor'];
+
+        function saveToLocalStorage() {
+            LS_FIELDS.forEach(id => {
+                localStorage.setItem('slides_' + id, document.getElementById(id).value);
+            });
+        }
+
+        function loadFromLocalStorage() {
+            LS_FIELDS.forEach(id => {
+                const val = localStorage.getItem('slides_' + id);
+                if (val !== null && val !== '') {
+                    document.getElementById(id).value = val;
+                }
+            });
+        }
+
+        LS_FIELDS.forEach(id => {
+            document.getElementById(id).addEventListener('input', saveToLocalStorage);
+        });
+
+        async function submitForm() {
+            if (!document.getElementById('slideForm').checkValidity()) {
+                document.getElementById('slideForm').reportValidity();
+                return;
+            }
+
+            const yearVal = document.getElementById('year').value;
+            const monthVal = document.getElementById('month').value;
+            const speakerVal = document.getElementById('speaker').value;
+            const supervisorVal = document.getElementById('supervisor').value;
+
+            const templateInput = document.getElementById('templateFile');
+            const reportInput = document.getElementById('reportFile');
+            const docInput = document.getElementById('docFile');
+
+            if (!templateInput.files[0] && !preloadedTemplateBuffer) {
+                alertBox.innerText = '❌ 請先上傳公版簡報或確保伺服器存在公版';
+                alertBox.style.color = '#e74c3c';
+                alertBox.style.display = 'block';
+                return;
+            }
+
+            loadingDiv.style.display = 'block';
+            alertBox.style.display = 'none';
+            submitBtn.disabled = true;
+
+            try {
+                // 1. Write files to Pyodide FS
+                let templateData;
+                if (templateInput.files[0]) {
+                    const fileName = templateInput.files[0].name.toLowerCase();
+                    if (fileName.endsWith('.ppt')) {
+                        throw new Error('公版簡報：不支援舊版 .ppt 格式。請使用 .pptx 格式。');
+                    }
+                    console.log('Writing template file:', templateInput.files[0].name, templateInput.files[0].size, 'bytes');
+                    templateData = await templateInput.files[0].arrayBuffer();
+                } else {
+                    console.log('Using preloaded template buffer:', preloadedTemplateBuffer ? preloadedTemplateBuffer.byteLength : 0, 'bytes');
+                    templateData = preloadedTemplateBuffer;
+                }
+                pyodide.FS.writeFile('/slide-template.pptx', new Uint8Array(templateData));
+
+                let hasReport = false;
+                if (reportInput.files[0]) {
+                    const fileName = reportInput.files[0].name.toLowerCase();
+                    if (fileName.endsWith('.ppt')) {
+                        throw new Error('工作報告：不支援舊版 .ppt 格式。請先將其另存為 .pptx。');
+                    }
+                    console.log('Writing report file:', reportInput.files[0].name, reportInput.files[0].size, 'bytes');
+                    const reportData = await reportInput.files[0].arrayBuffer();
+                    pyodide.FS.writeFile('/report.pptx', new Uint8Array(reportData));
+                    hasReport = true;
+                }
+
+                let hasDoc = false;
+                if (docInput.files[0]) {
+                    console.log('Writing doc file:', docInput.files[0].name, docInput.files[0].size, 'bytes');
+                    const docData = await docInput.files[0].arrayBuffer();
+                    pyodide.FS.writeFile('/doc.docx', new Uint8Array(docData));
+                    hasDoc = true;
+                }
+
+                let hasProposal = false;
+                const proposalInput = document.getElementById('proposalFile');
+                if (proposalInput.files[0]) {
+                    const fileName = proposalInput.files[0].name.toLowerCase();
+                    if (fileName.endsWith('.ppt')) {
+                        throw new Error('不支援舊版 .ppt 格式。請先在 PowerPoint 中將檔案「另存新檔」為 .pptx 格式後再重新上傳。');
+                    }
+                    console.log('Writing proposal file:', proposalInput.files[0].name, proposalInput.files[0].size, 'bytes');
+                    const proposalData = await proposalInput.files[0].arrayBuffer();
+                    if (proposalData.byteLength === 0) {
+                        throw new Error('提案簡報檔案大小為 0，請確認檔案是否正確。');
+                    }
+                    pyodide.FS.writeFile('/proposal.pptx', new Uint8Array(proposalData));
+                    hasProposal = true;
+                }
+
+                // 2. Load Python Code
+                await pyodide.runPythonAsync(pyScript);
+
+                // 3. Call the Python wrapper
+                const pyCall = `run_replace('${yearVal}', '${monthVal}', '${speakerVal}', '${supervisorVal}', ${hasReport ? 'True' : 'False'}, ${hasDoc ? 'True' : 'False'}, ${hasProposal ? 'True' : 'False'})`
+                const resultText = await pyodide.runPythonAsync(pyCall);
+
+                // 顯示摘要文字
+                if (resultText && resultText.trim()) {
+                    document.getElementById('summaryText').value = resultText;
+                    document.getElementById('summarySection').style.display = 'block';
+                } else {
+                    document.getElementById('summarySection').style.display = 'none';
+                }
+
+                // 4. Extract output
+                const outputData = pyodide.FS.readFile('/output.pptx');
+                const blob = new Blob([outputData], {
+                    type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+                });
+                const newName = `${yearVal}年${monthVal}月例會.pptx`;
+
+                if (window.showSaveFilePicker) {
+                    try {
+                        const fileHandle = await window.showSaveFilePicker({
+                            suggestedName: newName,
+                            types: [{
+                                description: 'PowerPoint 簡報',
+                                accept: { 'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'] }
+                            }]
+                        });
+                        const writable = await fileHandle.createWritable();
+                        await writable.write(blob);
+                        await writable.close();
+                        alertBox.innerText = '✅ 簡報已儲存完成';
+                    } catch (e) {
+                        if (e.name !== 'AbortError') throw e;
+                        alertBox.innerText = '⚠️ 已取消儲存';
+                        alertBox.style.color = '#e67e22';
+                        alertBox.style.display = 'block';
+                        return;
+                    }
+                } else {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = newName;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                    alertBox.innerText = '✅ 簡報修改完成並已下載';
+                }
+                alertBox.style.color = '#27ae60';
+                alertBox.style.display = 'block';
+
+            } catch (error) {
+                console.error('處理失敗:', error);
+                alertBox.innerText = '❌ 處理失敗：' + error.message;
+                alertBox.style.color = '#e74c3c';
+                alertBox.style.display = 'block';
+            } finally {
+                loadingDiv.style.display = 'none';
+                submitBtn.disabled = false;
+            }
+        }
+
+        function copyToClipboard() {
+            const text = document.getElementById('summaryText').value;
+            navigator.clipboard.writeText(text).then(() => {
+                const copyBtn = document.getElementById('copyBtn');
+                const originalHTML = copyBtn.innerHTML;
+                copyBtn.innerHTML = `
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    已複製！
+                `;
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalHTML;
+                }, 2000);
+            });
+        }
+
+        async function preloadTemplate() {
+            try {
+                const response = await fetch('./slide-template.pptx');
+                if (response.ok) {
+                    preloadedTemplateBuffer = await response.arrayBuffer();
+                    const statusEl = document.getElementById('templateStatus');
+                    statusEl.innerHTML = '<span style="color:#27ae60; font-weight:bold;">✅ 已自動載入伺服器上的公版簡報！</span> (您也可以上傳檔案來覆蓋它)';
+                } else {
+                    document.getElementById('templateStatus').innerHTML = '伺服器無預設公版。請先<a href="https://docs.google.com/presentation/d/1NPYNx_WUlXorJ17BSLvC6mOrSzL30md5/export/pptx" target="_blank" style="color:var(--primary-color); font-weight:bold; text-decoration:underline;">下載公版簡報</a>，並在此拖曳上傳。';
+                }
+            } catch (e) {
+                document.getElementById('templateStatus').innerHTML = '無法連線讀取伺服器公版。請先<a href="https://docs.google.com/presentation/d/1NPYNx_WUlXorJ17BSLvC6mOrSzL30md5/export/pptx" target="_blank" style="color:var(--primary-color); font-weight:bold; text-decoration:underline;">下載公版簡報</a>，並在此拖曳上傳。';
+            }
+        }
+
+        async function initPyodide() {
+            preloadTemplate();
+            try {
+                // Fetch the python script
+                const resp = await fetch('./meeting_slide_tool.py');
+                pyScript = await resp.text();
+
+                pyodide = await loadPyodide();
+                await pyodide.loadPackage(['micropip']);
+                const micropip = pyodide.pyimport('micropip');
+                await micropip.install(['python-pptx', 'lxml']);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    轉換並下載簡報
+                `;
+            } catch (error) {
+                console.error(error);
+                alertBox.innerText = '❌ 系統初始化失敗，請檢查網路連線或重新整理頁面';
+                alertBox.style.color = '#e74c3c';
+                alertBox.style.display = 'block';
+            }
+        }
+
+        window.addEventListener('load', () => {
+            loadFromLocalStorage();
+            initPyodide();
+
+            document.querySelectorAll('.file-drop-area input[type="file"]').forEach(input => {
+                const area = input.closest('.file-drop-area');
+                const nameDisplay = area.querySelector('.file-name');
+                const defaultText = area.querySelector('.file-drop-text');
+
+                input.addEventListener('change', () => {
+                    if (input.files.length > 0) {
+                        const fileName = input.files[0].name.toLowerCase();
+                        if (fileName.endsWith('.ppt')) {
+                            alert('❌ 不支援舊版 .ppt 格式。\n\n請在 PowerPoint 中將檔案「另存新檔」為 .pptx 格式後再重新上傳。');
+                            input.value = ''; // Clear the input
+                            nameDisplay.textContent = '';
+                            area.style.borderColor = '';
+                            area.style.background = '';
+                            defaultText.style.display = 'block';
+                            return;
+                        }
+                        nameDisplay.textContent = '已選擇：' + input.files[0].name;
+                        area.style.borderColor = 'var(--primary-color)';
+                        area.style.background = 'rgba(168, 122, 79, 0.05)';
+                        defaultText.style.display = 'none';
+                    } else {
+                        nameDisplay.textContent = '';
+                        area.style.borderColor = '';
+                        area.style.background = '';
+                        defaultText.style.display = 'block';
+                    }
+                });
+
+                area.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    area.classList.add('dragover');
+                });
+
+                area.addEventListener('dragleave', () => {
+                    area.classList.remove('dragover');
+                });
+
+                area.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    area.classList.remove('dragover');
+                    if (e.dataTransfer.files.length > 0) {
+                        input.files = e.dataTransfer.files;
+                        input.dispatchEvent(new Event('change'));
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>

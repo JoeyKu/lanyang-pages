@@ -15,7 +15,7 @@
 import sys
 from pathlib import Path
 from PIL import Image
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 
 
@@ -45,7 +45,7 @@ def fit_rect(img_w, img_h, cell_w, cell_h):
     return new_w, new_h, x_off, y_off
 
 
-def images_to_pdf(folder: str, output_pdf: str):
+def images_to_pdf(folder: str, output_pdf: str, layout: str = "4up_portrait"):
     images = get_sorted_images(folder)
     if not images:
         print(f"❌ 在 '{folder}' 找不到任何圖片！")
@@ -53,27 +53,42 @@ def images_to_pdf(folder: str, output_pdf: str):
 
     print(f"✅ 找到 {len(images)} 張圖片，開始處理...")
 
-    page_w, page_h = A4   # 595 x 842 points
-    margin = 20           # 頁面外邊距
-    gutter = 10           # 圖片間距
+    if layout == "8up_landscape":
+        page_w, page_h = landscape(A4)
+        cols = 4
+        rows = 2
+        per_page = 8
+        cm_to_pt = 72 / 2.54
+        cell_w = 7 * cm_to_pt
+        cell_h = 10 * cm_to_pt
+        gutter = 5
+        margin_x = (page_w - cols * cell_w - (cols - 1) * gutter) / 2
+        margin_y = (page_h - rows * cell_h - (rows - 1) * gutter) / 2
+    else:
+        page_w, page_h = A4
+        cols = 2
+        rows = 2
+        per_page = 4
+        gutter = 10
+        margin_x = 20
+        margin_y = 20
+        cell_w = (page_w - margin_x * 2 - gutter * (cols - 1)) / cols
+        cell_h = (page_h - margin_y * 2 - gutter * (rows - 1)) / rows
 
-    cell_w = (page_w - margin * 2 - gutter) / 2
-    cell_h = (page_h - margin * 2 - gutter) / 2
+    # 建立所有格子的座標 (左下角為原點)
+    # 排列順序：從上到下，從左到右
+    cells = []
+    for row in range(rows):
+        for col in range(cols):
+            x = margin_x + col * (cell_w + gutter)
+            y = page_h - margin_y - (row + 1) * cell_h - row * gutter
+            cells.append((x, y))
 
-    # 2x2 格子左下角座標（reportlab 原點在左下）
-    # 排列：左上=0, 右上=1, 左下=2, 右下=3
-    cells = [
-        (margin,                   margin + gutter + cell_h),
-        (margin + gutter + cell_w, margin + gutter + cell_h),
-        (margin,                   margin),
-        (margin + gutter + cell_w, margin),
-    ]
+    c = canvas.Canvas(output_pdf, pagesize=(page_w, page_h))
 
-    c = canvas.Canvas(output_pdf, pagesize=A4)
-
-    for page_num, i in enumerate(range(0, len(images), 4)):
-        batch = images[i:i+4]
-        print(f"  處理第 {page_num + 1} 頁（圖片 {i+1}~{min(i+4, len(images))}）...")
+    for page_num, i in enumerate(range(0, len(images), per_page)):
+        batch = images[i:i+per_page]
+        print(f"  處理第 {page_num + 1} 頁（圖片 {i+1}~{min(i+per_page, len(images))}）...")
 
         for j, img_path in enumerate(batch):
             with Image.open(img_path) as im:
@@ -96,10 +111,10 @@ def images_to_pdf(folder: str, output_pdf: str):
 
     c.save()
     print(f"\n🎉 完成！PDF 已儲存至：{output_pdf}")
-    print(f"   共 {-(-len(images) // 4)} 頁（{len(images)} 張圖片）")
+    print(f"   共 {-(-len(images) // per_page)} 頁（{len(images)} 張圖片）")
 
 
 if __name__ == "__main__":
     folder = sys.argv[1] if len(sys.argv) > 1 else "."
-    output  = sys.argv[2] if len(sys.argv) > 2 else "output.pdf"
-    images_to_pdf(folder, output)
+    layout = sys.argv[3] if len(sys.argv) > 3 else "4up_portrait"
+    images_to_pdf(folder, output, layout)

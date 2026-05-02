@@ -64,6 +64,17 @@ def images_to_pdf(folder: str, output_pdf: str, layout: str = "4up_portrait"):
         gutter = 5
         margin_x = (page_w - cols * cell_w - (cols - 1) * gutter) / 2
         margin_y = (page_h - rows * cell_h - (rows - 1) * gutter) / 2
+    elif layout == "8up_portrait_10x7":
+        page_w, page_h = A4
+        cols = 2
+        rows = 4
+        per_page = 8
+        cm_to_pt = 72 / 2.54
+        cell_w = 10 * cm_to_pt
+        cell_h = 7 * cm_to_pt
+        gutter = 5
+        margin_x = (page_w - cols * cell_w - (cols - 1) * gutter) / 2
+        margin_y = (page_h - rows * cell_h - (rows - 1) * gutter) / 2
     else:
         page_w, page_h = A4
         cols = 2
@@ -116,5 +127,6 @@ def images_to_pdf(folder: str, output_pdf: str, layout: str = "4up_portrait"):
 
 if __name__ == "__main__":
     folder = sys.argv[1] if len(sys.argv) > 1 else "."
+    output = sys.argv[2] if len(sys.argv) > 2 else "output.pdf"
     layout = sys.argv[3] if len(sys.argv) > 3 else "4up_portrait"
     images_to_pdf(folder, output, layout)

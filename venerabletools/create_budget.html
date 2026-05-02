@@ -301,6 +301,18 @@
           </svg>
           橫式八張(4x2)
         </label>
+        <label class="radio-label">
+          <input type="radio" name="layout" value="8up_portrait_10x7">
+          <svg width="24" height="34" viewBox="0 0 24 34" fill="none" xmlns="http://www.w3.org/2000/svg"
+            style="color: var(--primary); flex-shrink: 0;">
+            <rect x="2" y="2" width="20" height="30" rx="2" stroke="currentColor" stroke-width="2" />
+            <line x1="12" y1="2" x2="12" y2="32" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 3" />
+            <line x1="2" y1="9.5" x2="22" y2="9.5" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 3" />
+            <line x1="2" y1="17" x2="22" y2="17" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 3" />
+            <line x1="2" y1="24.5" x2="22" y2="24.5" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 3" />
+          </svg>
+          直式八張(2x4)
+        </label>
       </div>
 
       <div class="drop-zone" id="drop-zone">
@@ -459,6 +471,20 @@
           const cmToPt = 72 / 2.54;
           cellW = 7 * cmToPt;
           cellH = 10 * cmToPt;
+          gutter = 5;
+          marginX = (pageW - cols * cellW - (cols - 1) * gutter) / 2;
+          marginY = (pageH - rows * cellH - (rows - 1) * gutter) / 2;
+        } else if (layout === '8up_portrait_10x7') {
+          pageW = 595.28;
+          pageH = 841.89;
+          orientation = 'portrait';
+          cols = 2;
+          rows = 4;
+          perPage = 8;
+
+          const cmToPt = 72 / 2.54;
+          cellW = 10 * cmToPt;
+          cellH = 7 * cmToPt;
           gutter = 5;
           marginX = (pageW - cols * cellW - (cols - 1) * gutter) / 2;
           marginY = (pageH - rows * cellH - (rows - 1) * gutter) / 2;

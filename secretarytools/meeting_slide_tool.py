@@ -544,7 +544,7 @@ def extract_proposal_summary_text(doc_path):
     output_lines = [
         "<b><font size=\"+1\">一、主席致詞：</font></b>",
         "<hr>",
-        "<b><font size=\"+1\">二、宣講員致詞：</font></b>",
+        "<b><font size=\"+1\">二、宣講員宣講：</font></b>",
         "<hr>"
     ]
     try:

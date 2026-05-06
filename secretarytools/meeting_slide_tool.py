@@ -541,7 +541,12 @@ def extract_proposal_summary_text(doc_path):
     import zipfile
     import xml.etree.ElementTree as ET
     
-    output_lines = []
+    output_lines = [
+        "<b><font size=\"+1\">一、主席致詞：</font></b>",
+        "<hr>",
+        "<b><font size=\"+1\">二、宣講員致詞：</font></b>",
+        "<hr>"
+    ]
     try:
         with zipfile.ZipFile(str(doc_path), 'r') as z:
             content = z.read('word/document.xml')
@@ -570,19 +575,19 @@ def extract_proposal_summary_text(doc_path):
                     in_effect_section = True
                     in_discussion_section = False
                     last_marker = None
-                    output_lines.append(f"\n====================宣讀上次決議案執行成效====================")
+                    output_lines.append(f"\n<b><font size=\"+2\">三、宣讀上次決議案執行成效</font></b>")
                     continue
                 if '總會提案討論' in text:
                     in_effect_section = False
                     in_discussion_section = True
                     last_marker = None
-                    output_lines.append(f"\n====================總會提案討論====================")
+                    output_lines.append(f"\n<hr><b><font size=\"+2\">四、總會提案討論</font></b>")
                     continue
                 if '別院提案討論' in text:
                     in_effect_section = False
                     in_discussion_section = True
                     last_marker = None
-                    output_lines.append(f"\n====================別院提案討論====================")
+                    output_lines.append(f"\n<hr><b><font size=\"+2\">五、別院提案討論</font></b>")
                     continue
                 if '各類宣導' in text:
                     in_effect_section = False
@@ -595,14 +600,14 @@ def extract_proposal_summary_text(doc_path):
                 if in_effect_section:
                     if text.startswith('【提案') and '】' in text:
                         if last_marker == 'bb':
-                            output_lines.append("") # 提案間留空行
-                        output_lines.append(text)
+                            output_lines.append("<br>") # 提案間換行
+                        output_lines.append(f"<b>{text}</b>")
                         last_marker = 'pro'
                     elif stripped.startswith('案由：') or stripped.startswith('案由:'):
-                        output_lines.append(text)
+                        output_lines.append(text.replace('案由：', '<b>案由：</b>').replace('案由:', '<b>案由:</b>'))
                         last_marker = 'aa'
                     elif stripped.startswith('執行成效：') or stripped.startswith('執行成效:') or stripped.startswith('執行辦法：') or stripped.startswith('執行辦法:'):
-                        output_lines.append(text)
+                        output_lines.append(text.replace('執行成效：', '<b>執行成效：</b>').replace('執行成效:', '<b>執行成效:</b>').replace('執行辦法：', '<b>執行辦法：</b>').replace('執行辦法:', '<b>執行辦法:</b>'))
                         last_marker = 'bb'
                     elif last_marker in ['aa', 'bb']:
                         # 延續上一行內容 (多行處理)
@@ -610,12 +615,13 @@ def extract_proposal_summary_text(doc_path):
                 
                 elif in_discussion_section:
                     if text.startswith('【提案') and '】' in text:
-                        output_lines.append(text)
+                        if last_marker is not None:
+                            output_lines.append("<br>") # 提案前換行
+                        output_lines.append(f"<b>{text}</b>")
                         last_marker = 'pro'
                     elif stripped.startswith('案由：') or stripped.startswith('案由:'):
                         output_lines.append(text)
                         output_lines.append("執行辦法: ")
-                        output_lines.append("") # 提案間留空行
                         last_marker = 'aa'
                     elif last_marker == 'aa':
                         if any(k in stripped for k in ['說明', '討論', '辦法']):
@@ -627,6 +633,9 @@ def extract_proposal_summary_text(doc_path):
     except Exception as e:
         return f"⚠️ 文字擷取失敗: {e}"
         
+    output_lines.append(f"\n<hr><b><font size=\"+1\">六、上級指導致詞：</font></b>")
+    output_lines.append(f"<hr><b><font size=\"+1\">七、輔導法師開示：</font></b>")
+    output_lines.append(f"<hr><b><font size=\"+1\">八、主席結論：</font></b>")
     return "\n".join(output_lines).strip()
 
 

@@ -536,35 +536,64 @@
         function formatNames() {
             const input = document.getElementById('input').value;
             if (!input.trim()) { alert('請先輸入文字'); return; }
+            
             const lines = input.split('\n');
-            let firstLineIndex = -1, lastLineIndex = -1;
-            const numRegex = /^\s*\d+[.、。]/;
+            let firstLineIndex = -1;
+            const numRegex = /^\s*[0-9①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳(（\[【]/;
             for (let i = 0; i < lines.length; i++) {
                 if (numRegex.test(lines[i])) {
-                    if (firstLineIndex === -1) firstLineIndex = i;
-                    lastLineIndex = i;
+                    firstLineIndex = i;
+                    break;
                 }
             }
+
             let textToProcess = input;
-            if (firstLineIndex !== -1) textToProcess = lines.slice(firstLineIndex, lastLineIndex + 1).join('\n');
+            if (firstLineIndex !== -1) {
+                textToProcess = lines.slice(firstLineIndex).join('\n');
+            }
 
             const items = textToProcess.split(/[\n,，、;；]/).map(s => s.trim()).filter(Boolean);
-            const parsed = items.map(item => {
-                // 移除前置編號或多餘空白
-                const raw = item.replace(/^[0-9\s.、。()（）]+/, '').trim();
-                // 先移除尾部括號描述
-                let base = raw.replace(/[\s(（][^()（）]*[)）]$/, '').trim();
-                let name = base;
+            
+            const skipKeywords = [
+                '接龍', '截止', '注意事項', '時間', '地點', '提醒', '謝謝', 
+                '統計', '人數', '講座', '活動', '報名', '清單', '分享',
+                '月例會', '會議', '聯絡', '大家', '各位', '恭喜', '備註',
+                '說明', '群組', '主旨', '目的', '對象', '日期', '地點', '講師'
+            ];
+
+            const parsed = [];
+            for (let item of items) {
+                // 檢查是否含有過濾關鍵字
+                const hasKeyword = skipKeywords.some(kw => item.includes(kw));
+                if (hasKeyword) continue;
+
+                const raw = item;
+                // 1. 移除前置編號及標點符號 (例如: "1.", "2、", "10. ", "①", "(1)")
+                item = item.replace(/^[0-9\s.、。()（）\[\]【】①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳\-—+_]+/, '').trim();
+
+                // 2. 移除尾端括號及其內容 (例如: "(隨喜)", "（開車）", "[備註]")
+                item = item.replace(/[\s(（\[【][^()（）\[\]_【】]*[)）\]】]$/, '').trim();
+
+                // 3. 移除破折號、冒號等備註部分 (例如: "張三 - 隨喜", "李四: 帶水")
+                let name = item;
                 let note = '';
-                // 如果有用破折號、冒號或空白分隔的備註，嘗試分離：例如 "尤秀華-五戎複戒..."
-                const m = base.match(/^(.*?)[\-–—:\：\s]+(.+)$/);
+                const m = item.match(/^(.*?)[\-–—:\：\s\+]+(.+)$/);
                 if (m) {
-                    name = m[1].trim();
-                    note = m[2].trim().replace(/[。\.]+$/,'');
+                    const part1 = m[1].trim();
+                    if (part1.length >= 2 && part1.length <= 6) {
+                        name = part1;
+                        note = m[2].trim().replace(/[。\.]+$/,'');
+                    }
                 }
-                name = name.replace(/\s+/g, ' ').trim();
-                return { name, note, raw: item };
-            });
+
+                // 清除內部多餘空格
+                name = name.replace(/\s+/g, '').trim();
+
+                // 最終檢查：長度在 2 ~ 8 字之間，且不為空
+                if (name && name.length >= 2 && name.length <= 8) {
+                    parsed.push({ name, note, raw });
+                }
+            }
 
             document.getElementById('output').value = parsed.map(p => p.name).join(',');
             const outStructured = document.getElementById('outputStructured');

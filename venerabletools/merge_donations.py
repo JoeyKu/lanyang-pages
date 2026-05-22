@@ -118,8 +118,8 @@ def read_excel_with_header_detection(filepath: str) -> Tuple[pd.DataFrame, int]:
     for idx, row in df_preview.iterrows():
         # 將該列的所有非空值轉成字串
         row_str = [str(x).strip() for x in row.values if pd.notna(x)]
-        # 檢查該列是否同時包含「姓名/捐款人」以及「金額/總計」相關關鍵字
-        has_name = any(any(k in s for k in ['捐款人', '姓名']) for s in row_str)
+        # 檢查該列是否同時包含「捐款人」以及「金額/總計」相關關鍵字
+        has_name = any('捐款人' in s for s in row_str)
         has_amount = any(any(k in s for k in ['金額', '總金額', '總計', '累計', '金額小計']) for s in row_str)
         
         if has_name and has_amount:
@@ -155,16 +155,10 @@ def find_matched_columns(df: pd.DataFrame) -> Tuple[Optional[str], Optional[str]
         if cleaned_name == '捐款人':
             name_col = orig_name
             break
-    # 第二優先：精準匹配「姓名」
+    # 第二優先：包含「捐款人」但排除代號/編號/代碼/統編/身分證等
     if not name_col:
         for cleaned_name, orig_name in zip(columns, original_cols):
-            if cleaned_name == '姓名':
-                name_col = orig_name
-                break
-    # 第三優先：包含「捐款人」或「姓名」
-    if not name_col:
-        for cleaned_name, orig_name in zip(columns, original_cols):
-            if any(k in cleaned_name for k in ['捐款人', '姓名']):
+            if '捐款人' in cleaned_name:
                 if not any(ex in cleaned_name for ex in ['代號', '編號', '代碼', '統編', '身分證']):
                     name_col = orig_name
                     break
@@ -308,15 +302,17 @@ def main():
         print(f"   對應欄位結果:")
         print(f"     - 捐款人姓名: {f'[{name_col}]' if name_col else '❌ 未找到'}")
         print(f"     - 捐款人代號: {f'[{code_col}]' if code_col else '❌ 未找到'}")
-        print(f"     - 身分證/統編: {f'[{id_col}]' if id_col else '⚠️ 未找到 (選填)'}")
+        print(f"     - 身分證/統編: {f'[{id_col}]' if id_col else '❌ 未找到'}")
         print(f"     - 總金額欄位: {f'[{amount_col}]' if amount_col else '❌ 未找到'}")
         
-        if not name_col or not amount_col or not code_col:
+        if not name_col or not amount_col or not code_col or not id_col:
             print(f"\n❌ 關鍵錯誤：檔案 '{filename}' 缺少必要欄位！")
             if not name_col:
-                print("   - 缺少 [捐款人] 或 [姓名] 欄位")
+                print("   - 缺少 [捐款人] 欄位")
             if not code_col:
                 print("   - 缺少 [捐款人代號] 欄位")
+            if not id_col:
+                print("   - 缺少 [身分證/統編] 欄位")
             if not amount_col:
                 print("   - 缺少 [總金額] 欄位")
             print("🛑 整合程序已終止，未產生任何整合檔案。")
@@ -344,43 +340,48 @@ def main():
             raw_amount = row[amount_col]
             amount = 0.0
             amount_parsed = False
+            is_amount_missing = pd.isna(raw_amount) or str(raw_amount).strip() == ""
             
-            if pd.notna(raw_amount) and str(raw_amount).strip() != "":
+            if not is_amount_missing:
                 try:
                     # 移除非數字字元 (例如千分位逗號, 錢字符號)
                     amount_str = re.sub(r'[^\d\.\-]', '', str(raw_amount))
                     if amount_str:
                         amount = float(amount_str)
                         amount_parsed = True
-                    else:
-                        amount = 0.0
-                        amount_parsed = True
                 except ValueError:
                     pass
-            else:
-                amount = 0.0
-                amount_parsed = True
                 
             # 判斷是否為完全空白列 (姓名、代號、身分證、原始金額皆無內容)
-            is_empty_row = (not name) and (not code) and (not id_no) and (pd.isna(raw_amount) or str(raw_amount).strip() == "")
+            is_empty_row = (not name) and (not code) and (not id_no) and is_amount_missing
             
             if is_empty_row:
                 empty_row_count += 1
                 continue
                 
-            # 關鍵檢查：任何有效資料列，若缺少姓名或代號，直接報錯並終止執行
-            if not name or not code:
-                print(f"\n❌ 關鍵錯誤：檔案 '{filename}' 第 {excel_row} 列缺少必要內容！")
-                if not name:
-                    print("   - 缺少「捐款人」姓名")
-                if not code:
-                    print("   - 缺少「捐款人代號」")
+            # 關鍵檢查：任何有效資料列，若缺少姓名、代號或總金額，直接報錯並終止執行
+            has_error = False
+            error_msgs = []
+            
+            if not name:
+                has_error = True
+                error_msgs.append("缺少「捐款人」姓名")
+            if not code:
+                has_error = True
+                error_msgs.append("缺少「捐款人代號」")
+            if is_amount_missing:
+                has_error = True
+                error_msgs.append("缺少「總金額」")
+            elif not amount_parsed:
+                has_error = True
+                error_msgs.append(f"「總金額」格式異常（原始內容為「{raw_amount}」，無法解析為數值）")
+                
+            if has_error:
+                print(f"\n❌ 關鍵錯誤：檔案 '{filename}' 第 {excel_row} 列缺少必要內容或格式不符！")
+                for msg in error_msgs:
+                    print(f"   - {msg}")
                 print("🛑 整合程序已終止，未產生任何整合檔案。")
                 sys.exit(1)
-                
-            # 若金額無法解析
-            if not amount_parsed:
-                print(f"     ⚠️ 第 {excel_row} 列金額格式異常：原始內容為「{raw_amount}」，無法解析為數值，已自動將金額設為 0 元載入。")
                 
             # 比對現有捐款人
             donor = find_matching_donor(donors, name, code, id_no)

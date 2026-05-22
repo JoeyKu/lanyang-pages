@@ -420,8 +420,7 @@
                 </h3>
                 <ul>
                     <li><strong>檔名開頭規範</strong>：上傳之 Excel 檔案名稱<strong>必須以四位數年份開頭</strong>（例如：<code>2024-donations.xlsx</code>、<code>2025功德主名單.xls</code>），以便系統識別資料年度。</li>
-                    <li><strong>必要資料欄位</strong>：每個 Excel 工作表內必須包含<strong>「捐款人」</strong>（或「姓名」）、<strong>「捐款人代號」</strong>及<strong>「總金額」</strong>三個欄位。</li>
-                    <li><strong>嚴格校驗規則</strong>：每一筆有效資料列均<strong>必須填寫「捐款人代號」與「姓名」</strong>。若偵測到缺失，系統將報錯且不予生成整合 Excel。</li>
+                    <li><strong>必要資料欄位</strong>：每個 Excel 工作表內必須包含<strong>「捐款人」</strong>、<strong>「捐款人代號」</strong>、<strong>「身分證/統編」</strong>及<strong>「總金額」</strong>四個欄位。若缺少任一欄位，系統將直接報錯且不予生成。</li>
                     <li><strong>異常跳過規則</strong>：全空白的列將被自動忽略。</li>
                 </ul>
             </div>

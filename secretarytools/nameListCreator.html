@@ -443,13 +443,13 @@
                 </div>
 
                 <div class="input-group">
-                    <label>轉換結果（可編輯）</label>
+                    <label>轉換結果（可編輯）<span id="nameCount" style="margin-left: 8px; font-weight: normal; font-size: 16px; color: var(--accent-color);"></span></label>
                     <div class="output-group">
                         <textarea id="output" placeholder="尚未轉換..."></textarea>
                     </div>
                 </div>
 
-                <div class="input-group">
+                <div class="input-group" style="display: none;">
                     <label>結構化結果（JSON）</label>
                     <div class="output-group">
                         <textarea id="outputStructured" placeholder="尚未轉換...（將輸出 JSON 結構）" style="min-height:140px; white-space:pre-wrap; font-family:monospace;"></textarea>
@@ -596,6 +596,7 @@
             }
 
             document.getElementById('output').value = parsed.map(p => p.name).join(',');
+            document.getElementById('nameCount').textContent = `（共 ${parsed.length} 人）`;
             const outStructured = document.getElementById('outputStructured');
             if (outStructured) outStructured.value = JSON.stringify(parsed, null, 2);
         }
@@ -603,6 +604,9 @@
         function clearAll() {
             document.getElementById('input').value = '';
             document.getElementById('output').value = '';
+            document.getElementById('nameCount').textContent = '';
+            const outStructured = document.getElementById('outputStructured');
+            if (outStructured) outStructured.value = '';
         }
 
         function copyResult() {

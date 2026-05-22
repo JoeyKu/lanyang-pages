@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>捐款名單整合工具 - 法師工具箱</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Outfit:wght@400;600&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide.js"></script>
+    <style>
+        :root {
+            --primary-color: #a87a4f;
+            --accent-color: #d4a373;
+            --bg-color: #fdfaf3;
+            --card-bg: #ffffff;
+            --text-main: #3d2c1b;
+            --text-secondary: #8a6542;
+            --shadow: 0 10px 25px rgba(168, 122, 79, 0.08);
+            --border-color: rgba(168, 122, 79, 0.2);
+            --border-color-hover: rgba(168, 122, 79, 0.5);
+            --radius: 16px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --red: #d9534f;
+            --green: #2ec4b6;
+            --terminal-bg: #22150c;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 40px 20px;
+        }
+
+        main {
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--primary-color);
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            transition: var(--transition);
+        }
+
+        .back-btn:hover {
+            color: var(--accent-color);
+            transform: translateX(-5px);
+        }
+
+        .back-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .header .icon {
+            font-size: 44px;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .header h1 {
+            font-family: 'Outfit', 'Noto Sans TC', sans-serif;
+            font-size: 36px;
+            color: var(--primary-color);
+            font-weight: 600;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .tool-card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 35px;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(168, 122, 79, 0.1);
+            margin-bottom: 30px;
+        }
+
+        /* Instructions Alert Box */
+        .instructions-box {
+            background-color: #faf3e8;
+            border-left: 4px solid var(--accent-color);
+            border-radius: 6px;
+            padding: 16px 20px;
+            margin-bottom: 25px;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        .instructions-box h3 {
+            color: var(--primary-color);
+            font-size: 16px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .instructions-box ul {
+            padding-left: 20px;
+            color: var(--text-main);
+        }
+
+        .instructions-box li {
+            margin-bottom: 4px;
+        }
+
+        .instructions-box strong {
+            color: var(--primary-color);
+        }
+
+        /* Drag and Drop Zone */
+        .drop-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            background: #fffdfa;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            margin-bottom: 25px;
+        }
+
+        .drop-zone:hover,
+        .drop-zone.dragover {
+            border-color: var(--primary-color);
+            background: #fbf7f0;
+            box-shadow: 0 4px 12px rgba(168, 122, 79, 0.05);
+        }
+
+        .drop-zone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+
+        .dz-icon {
+            font-size: 40px;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .dz-label {
+            font-size: 18px;
+            color: var(--primary-color);
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .dz-hint {
+            font-size: 14px;
+            color: #8a7a6e;
+        }
+
+        /* File Chips */
+        .file-list-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+            display: none;
+        }
+
+        .file-list-title.active {
+            display: block;
+        }
+
+        .file-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #fbf7f0;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 6px 14px;
+            font-size: 14px;
+            color: var(--text-main);
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .chip:hover {
+            border-color: var(--accent-color);
+        }
+
+        .chip .remove-btn {
+            cursor: pointer;
+            color: #b09984;
+            font-size: 16px;
+            background: none;
+            border: none;
+            padding: 0;
+            line-height: 1;
+            transition: var(--transition);
+        }
+
+        .chip .remove-btn:hover {
+            color: var(--red);
+        }
+
+        /* Loading / Progress State */
+        .status-container {
+            margin-bottom: 25px;
+            display: none;
+        }
+
+        .status-container.active {
+            display: block;
+        }
+
+        .status-msg {
+            font-size: 14px;
+            color: var(--primary-color);
+            font-weight: 500;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .progress-bar-bg {
+            background-color: #eee5dc;
+            border-radius: 10px;
+            height: 8px;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .progress-bar {
+            background-color: var(--primary-color);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        /* Log / Terminal Output */
+        .terminal-container {
+            margin-bottom: 25px;
+            display: none;
+        }
+
+        .terminal-container.active {
+            display: block;
+        }
+
+        .terminal-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .log-output {
+            background-color: var(--terminal-bg);
+            border-radius: 8px;
+            padding: 16px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: 'Fira Code', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            color: #dcd6cd;
+            border: 1px solid #3d2a1b;
+            box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+        }
+
+        .log-line {
+            margin-bottom: 4px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .log-line.stdout {
+            color: #f7e6c4;
+        }
+
+        .log-line.stderr, .log-line.error {
+            color: #f28482;
+        }
+
+        .log-line.success {
+            color: #84a59d;
+            font-weight: 600;
+        }
+
+        .log-line.info {
+            color: #a8dadc;
+        }
+
+        /* Action Buttons */
+        .action-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            background: var(--primary-color);
+            color: #fff;
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(168, 122, 79, 0.15);
+            transition: var(--transition);
+        }
+
+        .action-btn:hover:not(:disabled) {
+            background: var(--accent-color);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(168, 122, 79, 0.25);
+        }
+
+        .action-btn:disabled {
+            background: #d3c7be;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .action-btn svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (max-width: 640px) {
+            .header h1 {
+                font-size: 28px;
+            }
+
+            .tool-card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main>
+        <a href="index.html" class="back-btn">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+            </svg>
+            返回工具箱
+        </a>
+
+        <div class="header">
+            <span class="icon">📊</span>
+            <h1>捐款名單整合工具</h1>
+            <p>上傳多個年度捐款 Excel 檔案，快速整合為單一 Excel 並自動排序</p>
+        </div>
+
+        <div class="tool-card">
+            <!-- Instructions Box -->
+            <div class="instructions-box">
+                <h3>
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0; color: var(--primary-color);">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                    使用說明與規範提醒：
+                </h3>
+                <ul>
+                    <li><strong>檔名開頭規範</strong>：上傳之 Excel 檔案名稱<strong>必須以四位數年份開頭</strong>（例如：<code>2024-donations.xlsx</code>、<code>2025功德主名單.xls</code>），以便系統識別資料年度。</li>
+                    <li><strong>必要資料欄位</strong>：每個 Excel 工作表內必須包含<strong>「捐款人」</strong>（或「姓名」）、<strong>「捐款人代號」</strong>及<strong>「總金額」</strong>三個欄位。</li>
+                    <li><strong>嚴格校驗規則</strong>：每一筆有效資料列均<strong>必須填寫「捐款人代號」與「姓名」</strong>。若偵測到缺失，系統將報錯且不予生成整合 Excel。</li>
+                    <li><strong>異常跳過規則</strong>：全空白的列將被自動忽略。</li>
+                </ul>
+            </div>
+
+            <!-- Drag and Drop Area -->
+            <div class="drop-zone" id="drop-zone">
+                <input type="file" accept=".xlsx,.xls" multiple id="file-input" onchange="handleFileSelect(this.files)">
+                <span class="dz-icon">📂</span>
+                <span class="dz-label">點擊選擇或拖曳 Excel 檔案至此</span>
+                <span class="dz-hint">支援多檔上傳，檔案名稱須以 4 位數年份開頭</span>
+            </div>
+
+            <!-- Uploaded File Chips -->
+            <div class="file-list-title" id="file-list-title">待處理檔案：</div>
+            <div class="file-list" id="file-list"></div>
+
+            <!-- Loading Indicator -->
+            <div class="status-container" id="status-container">
+                <div class="status-msg">
+                    <span id="status-text">系統初始化中...</span>
+                    <span id="status-percent">0%</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar" id="progress-bar"></div>
+                </div>
+            </div>
+
+            <!-- Real-time Terminal Log Output -->
+            <div class="terminal-container" id="terminal-container">
+                <div class="terminal-title">
+                    <span>執行過程日誌 (Python Output)：</span>
+                    <span style="font-size: 12px; font-weight: normal; color: #a89584;">Real-time</span>
+                </div>
+                <div class="log-output" id="log-output"></div>
+            </div>
+
+            <!-- Action button -->
+            <button class="action-btn" id="action-btn" disabled onclick="processFiles()">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                <span id="btn-text">系統載入中，請稍候...</span>
+            </button>
+        </div>
+    </main>
+
+    <script>
+        let pyodide = null;
+        let uploadedFiles = [];
+        let pyScript = "";
+
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const fileList = document.getElementById('file-list');
+        const fileListTitle = document.getElementById('file-list-title');
+        const statusContainer = document.getElementById('status-container');
+        const statusText = document.getElementById('status-text');
+        const statusPercent = document.getElementById('status-percent');
+        const progressBar = document.getElementById('progress-bar');
+        const terminalContainer = document.getElementById('terminal-container');
+        const logOutput = document.getElementById('log-output');
+        const actionBtn = document.getElementById('action-btn');
+        const btnText = document.getElementById('btn-text');
+
+        // Setup Drag and Drop events
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                handleFileSelect(e.dataTransfer.files);
+            }
+        });
+
+        function appendLog(text, type = 'stdout') {
+            const div = document.createElement('div');
+            div.className = `log-line ${type}`;
+            div.innerText = text;
+            logOutput.appendChild(div);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        function clearLog() {
+            logOutput.innerHTML = '';
+        }
+
+        async function updateStatus(message, progress) {
+            statusContainer.classList.add('active');
+            statusText.innerText = message;
+            statusPercent.innerText = progress + '%';
+            progressBar.style.width = progress + '%';
+            console.log(`[Status] ${message} (${progress}%)`);
+        }
+
+        function hideStatus() {
+            statusContainer.classList.remove('active');
+        }
+
+        // Initialize Pyodide on Page Load
+        async function initPyodide() {
+            try {
+                actionBtn.disabled = true;
+                await updateStatus('下載 Pyodide 執行引擎...', 15);
+                
+                // Initialize Pyodide with custom stdout/stderr captures
+                pyodide = await loadPyodide({
+                    stdout: (text) => {
+                        appendLog(text, 'stdout');
+                    },
+                    stderr: (text) => {
+                        appendLog(text, 'stderr');
+                    }
+                });
+
+                await updateStatus('安裝 Python 必要依賴套件 (pandas, openpyxl)...', 50);
+                await pyodide.loadPackage(['micropip']);
+                const micropip = pyodide.pyimport('micropip');
+                await micropip.install(['pandas', 'openpyxl']);
+
+                await updateStatus('載入整合核心程式...', 85);
+                const scriptResp = await fetch('./merge_donations.py');
+                if (!scriptResp.ok) {
+                    throw new Error(`無法讀取 merge_donations.py 核心，伺服器錯誤: ${scriptResp.status}`);
+                }
+                pyScript = await scriptResp.text();
+
+                // Save python script content into Pyodide virtual file system
+                pyodide.FS.writeFile('/merge_donations.py', pyScript);
+
+                await updateStatus('系統就緒', 100);
+                setTimeout(hideStatus, 1500);
+
+                actionBtn.disabled = false;
+                updateButtonState();
+            } catch (error) {
+                console.error("Pyodide 初始化失敗", error);
+                statusText.innerHTML = `<span style="color: var(--red);">初始化失敗: ${error.message}</span>`;
+                progressBar.style.backgroundColor = 'var(--red)';
+                appendLog(`❌ 系統初始化失敗：${error.message}`, 'error');
+            }
+        }
+
+        function handleFileSelect(files) {
+            let newlyAdded = 0;
+            for (let file of files) {
+                // Check extension
+                const fileName = file.name.toLowerCase();
+                if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
+                    alert(`❌ 檔案「${file.name}」格式不符，必須是 Excel 格式 (.xlsx, .xls)`);
+                    continue;
+                }
+
+                // Check starting with 4-digit year
+                const yearMatch = file.name.match(/^(\d{4})/);
+                if (!yearMatch) {
+                    alert(`❌ 檔案「${file.name}」命名不符規範！\n\n檔案名稱開頭必須是「四位數年份」（例如：2024-xxx.xlsx 或 2025_功德主.xlsx），否則系統無法識別該筆資料所屬年度。`);
+                    continue;
+                }
+
+                // Check duplicate
+                if (uploadedFiles.some(f => f.name === file.name)) {
+                    continue;
+                }
+
+                uploadedFiles.push(file);
+                newlyAdded++;
+            }
+
+            if (newlyAdded > 0) {
+                renderFileChips();
+                updateButtonState();
+            }
+            fileInput.value = ''; // Reset input element
+        }
+
+        function renderFileChips() {
+            fileList.innerHTML = '';
+            if (uploadedFiles.length > 0) {
+                fileListTitle.classList.add('active');
+                uploadedFiles.forEach((file, index) => {
+                    const chip = document.createElement('div');
+                    chip.className = 'chip';
+                    chip.innerHTML = `
+                        <span>📄 ${file.name} (${formatBytes(file.size)})</span>
+                        <button class="remove-btn" onclick="removeFile(${index})" title="移除此檔案">✕</button>
+                    `;
+                    fileList.appendChild(chip);
+                });
+            } else {
+                fileListTitle.classList.remove('active');
+            }
+        }
+
+        function removeFile(index) {
+            uploadedFiles.splice(index, 1);
+            renderFileChips();
+            updateButtonState();
+        }
+
+        function updateButtonState() {
+            if (!pyodide) {
+                actionBtn.disabled = true;
+                btnText.innerText = '系統載入中，請稍候...';
+                return;
+            }
+
+            if (uploadedFiles.length === 0) {
+                actionBtn.disabled = true;
+                btnText.innerText = '請先上傳 Excel 檔案';
+            } else {
+                actionBtn.disabled = false;
+                btnText.innerText = `開始整合並下載 (${uploadedFiles.length} 個檔案)`;
+            }
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        async function processFiles() {
+            if (uploadedFiles.length === 0 || !pyodide) return;
+
+            actionBtn.disabled = true;
+            btnText.innerHTML = '<span class="spinner"></span> 正在整合資料中...';
+            terminalContainer.classList.add('active');
+            clearLog();
+            appendLog('🚀 開始執行捐款名單整合作業...', 'info');
+
+            try {
+                // 1. Write uploaded files to Pyodide Virtual Filesystem
+                await updateStatus('正在寫入檔案至虛擬系統...', 20);
+                for (let file of uploadedFiles) {
+                    appendLog(`📥 寫入虛擬檔案系統: ${file.name}`, 'info');
+                    const arrayBuffer = await file.arrayBuffer();
+                    pyodide.FS.writeFile('/' + file.name, new Uint8Array(arrayBuffer));
+                }
+
+                // 2. Prepare Python execution code
+                await updateStatus('啟動 Python 整合程式...', 50);
+                const fileNamesJson = JSON.stringify(uploadedFiles.map(f => f.name));
+                
+                const pythonCode = `
+import sys
+import os
+import importlib
+
+# 切換工作目錄至根目錄，確保相對路徑正常
+os.chdir('/')
+
+# 確保路徑中包含根目錄，能載入 merge_donations
+if '/' not in sys.path:
+    sys.path.append('/')
+
+import merge_donations
+importlib.reload(merge_donations)
+
+# 設定 argv 給 argparse
+# 第一個參數為腳本名稱，後面接檔案路徑列表，再加 -o 指定輸出檔
+sys.argv = ['merge_donations.py'] + ${fileNamesJson} + ['-o', '/整合捐款名單.xlsx']
+
+try:
+    merge_donations.main()
+    print("SUCCESS_FLAG")
+except SystemExit as e:
+    if e.code == 0:
+        print("SUCCESS_FLAG")
+    else:
+        print(f"ERROR_FLAG: SystemExit raised with exit code {e.code}")
+        raise Exception(f"合併作業失敗退出 (代碼 {e.code})")
+except Exception as e:
+    print(f"ERROR_FLAG: Exception occurred - {str(e)}")
+    raise e
+`;
+
+                // 3. Execute script inside Pyodide
+                await updateStatus('處理中，執行對應與校驗...', 75);
+                await pyodide.runPythonAsync(pythonCode);
+
+                // 4. Download file from Pyodide virtual filesystem if successful
+                await updateStatus('產生整合檔案...', 90);
+                
+                // Read from Pyodide filesystem
+                let outputFileExists = false;
+                try {
+                    pyodide.FS.stat('/整合捐款名單.xlsx');
+                    outputFileExists = true;
+                } catch (e) {
+                    outputFileExists = false;
+                }
+
+                if (outputFileExists) {
+                    const excelOutputData = pyodide.FS.readFile('/整合捐款名單.xlsx');
+                    const blob = new Blob([excelOutputData], {
+                        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                    });
+                    
+                    const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+                    const downloadName = `整合捐款名單_${timestamp}.xlsx`;
+
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = downloadName;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+
+                    appendLog(`\n🎉 整合完成！檔案「${downloadName}」已順利產生並自動下載。`, 'success');
+                    await updateStatus('作業完成！', 100);
+                } else {
+                    throw new Error("整合作業未產生輸出檔案，請檢查上方日誌。");
+                }
+
+            } catch (err) {
+                console.error(err);
+                appendLog(`\n❌ 整合程序異常終止：\n${err.message}`, 'error');
+                await updateStatus('作業終止 (發生錯誤)', 100);
+                progressBar.style.backgroundColor = 'var(--red)';
+            } finally {
+                actionBtn.disabled = false;
+                updateButtonState();
+                setTimeout(hideStatus, 2000);
+            }
+        }
+
+        // Initialize Pyodide after page load
+        window.addEventListener('load', () => {
+            initPyodide();
+        });
+    </script>
+</body>
+
+</html>

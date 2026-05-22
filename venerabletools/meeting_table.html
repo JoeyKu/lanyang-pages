@@ -172,7 +172,7 @@
 // ─────────────────────────────────────────────
 let files = [];
 let mergedData = [];
-let resultTitle = '宜蘭區2026年5月份月例會時間';
+let resultTitle = '月份月例會時間';
 
 const KEYS = ['branch','president','monk','date','week','time','venue','senior','lecturer'];
 const COLS_DISPLAY = ['分　會','會　長','輔導法師','日　期','週','時　間','地　　點','上級指導','宣　講　員'];
@@ -241,69 +241,114 @@ function updateBtn() {
 // ─────────────────────────────────────────────
 //  Parse workbook
 // ─────────────────────────────────────────────
-function parseWorkbook(wb) {
-  const sheetName = wb.SheetNames.find(n => n.includes('5月'))
-    || wb.SheetNames.find(n => n.includes('月'))
-    || wb.SheetNames[wb.SheetNames.length - 1];
-  const raw = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, defval: '' });
+function parseWorkbook(wb, filename) {
+  const monthMatch = filename.match(/(\d{1,2})\s*月/);
+  const fileMonth = monthMatch ? parseInt(monthMatch[1]) : null;
+  
+  const getSheetMonth = name => {
+    const m = name.match(/(\d{1,2})\s*月/);
+    return m ? parseInt(m[1]) : 0;
+  };
 
-  let dataStart = -1;
-  for (let i = 0; i < raw.length; i++) {
-    const row = raw[i].map(c => String(c).trim());
-    if (row.includes('分會') && row.includes('會長') && row.includes('宣講員')) {
-      dataStart = i + 1; break;
-    }
-  }
-  if (dataStart === -1) return null;
+  const sortedSheets = [...wb.SheetNames].sort((a, b) => {
+    return getSheetMonth(b) - getSheetMonth(a);
+  });
 
-  const hdr = raw[dataStart - 1].map(c => String(c).trim());
-  const idx = k => hdr.findIndex(h => h.includes(k));
-  const iB=idx('分會'),iP=idx('會長'),iM=idx('輔導'),iDt=idx('日期'),
-        iW=idx('週'),iT=idx('時間'),iV=idx('地'),iS=idx('上級'),iL=idx('宣講');
-
-  const rows = [];
-  for (let i = dataStart; i < raw.length; i++) {
-    const r = raw[i];
-    const branch = String(r[iB]??'').trim();
-    if (!branch || branch === '分會') continue;
-
-    let dateStr = '';
-    const rd = r[iDt];
-    if (rd) {
-      if (typeof rd === 'number') {
-        const d = XLSX.SSF.parse_date_code(rd);
-        if (d) dateStr = `${d.m}/${d.d}`;
-      } else {
-        const m = String(rd).match(/(\d{1,2})[-\/月](\d{1,2})/);
-        dateStr = m ? `${m[1]}/${m[2]}` : String(rd).replace(/2026[-年]/,'').trim();
-      }
-    }
-
-    let timeStr = '';
-    const rt = r[iT];
-    if (rt !== undefined && rt !== '') {
-      if (typeof rt === 'number') {
-        const tot = Math.round(rt * 24 * 60);
-        timeStr = `${String(Math.floor(tot/60)).padStart(2,'0')}:${String(tot%60).padStart(2,'0')}`;
-      } else {
-        const m = String(rt).match(/(\d{1,2}):(\d{2})/);
-        timeStr = m ? `${m[1].padStart(2,'0')}:${m[2]}` : String(rt).trim();
-      }
-    }
-
-    rows.push({
-      branch, president:String(r[iP]??'').trim(), monk:String(r[iM]??'').trim(),
-      date:dateStr, week:String(r[iW]??'').trim(), time:timeStr,
-      venue:String(r[iV]??'').trim(), senior:String(r[iS]??'').trim(),
-      lecturer:String(r[iL]??'').trim(),
+  const prioritizedNames = [];
+  if (fileMonth !== null) {
+    sortedSheets.forEach(n => {
+      if (n.includes(`${fileMonth}月`)) prioritizedNames.push(n);
+    });
+    sortedSheets.forEach(n => {
+      if (n.includes(String(fileMonth)) && !prioritizedNames.includes(n)) prioritizedNames.push(n);
     });
   }
-  return rows;
+  sortedSheets.forEach(n => {
+    if (n.includes('月') && !prioritizedNames.includes(n)) prioritizedNames.push(n);
+  });
+  sortedSheets.forEach(n => {
+    if (!prioritizedNames.includes(n)) prioritizedNames.push(n);
+  });
+
+  for (const sheetName of prioritizedNames) {
+    const raw = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, defval: '' });
+
+    let dataStart = -1;
+    for (let i = 0; i < raw.length; i++) {
+      const row = raw[i].map(c => String(c).trim());
+      if (row.includes('分會') && row.includes('會長') && row.includes('宣講員')) {
+        dataStart = i + 1; break;
+      }
+    }
+    if (dataStart === -1) continue;
+
+    let sheetMonth = null;
+    let sheetYear = null;
+    const cellA1 = raw[0] && raw[0][0] ? String(raw[0][0]).trim() : '';
+    const a1Ym = cellA1.match(/(\d{4})年\s*(\d{1,2})月/) || cellA1.match(/(\d{4})[-年](\d{1,2})/);
+    if (a1Ym) {
+      sheetYear = parseInt(a1Ym[1]);
+      sheetMonth = parseInt(a1Ym[2]);
+    } else {
+      const sm = sheetName.match(/(\d{1,2})\s*月/);
+      if (sm) sheetMonth = parseInt(sm[1]);
+      const sy = cellA1.match(/(\d{4})年/);
+      if (sy) sheetYear = parseInt(sy[1]);
+    }
+
+    const hdr = raw[dataStart - 1].map(c => String(c).trim());
+    const idx = k => hdr.findIndex(h => h.includes(k));
+    const iB=idx('分會'),iP=idx('會長'),iM=idx('輔導'),iDt=idx('日期'),
+          iW=idx('週'),iT=idx('時間'),iV=idx('地'),iS=idx('上級'),iL=idx('宣講');
+
+    const rows = [];
+    for (let i = dataStart; i < raw.length; i++) {
+      const r = raw[i];
+      const branch = String(r[iB]??'').trim();
+      if (!branch || branch === '分會') continue;
+
+      let dateStr = '';
+      const rd = r[iDt];
+      if (rd) {
+        if (typeof rd === 'number') {
+          const d = XLSX.SSF.parse_date_code(rd);
+          if (d) dateStr = `${d.m}/${d.d}`;
+        } else {
+          const m = String(rd).match(/(\d{1,2})[-\/月](\d{1,2})/);
+          dateStr = m ? `${m[1]}/${m[2]}` : String(rd).replace(/\d{4}[-年]/,'').trim();
+        }
+      }
+
+      let timeStr = '';
+      const rt = r[iT];
+      if (rt !== undefined && rt !== '') {
+        if (typeof rt === 'number') {
+          const tot = Math.round(rt * 24 * 60);
+          timeStr = `${String(Math.floor(tot/60)).padStart(2,'0')}:${String(tot%60).padStart(2,'0')}`;
+        } else {
+          const m = String(rt).match(/(\d{1,2}):(\d{2})/);
+          timeStr = m ? `${m[1].padStart(2,'0')}:${m[2]}` : String(rt).trim();
+        }
+      }
+
+      rows.push({
+        branch, president:String(r[iP]??'').trim(), monk:String(r[iM]??'').trim(),
+        date:dateStr, week:String(r[iW]??'').trim(), time:timeStr,
+        venue:String(r[iV]??'').trim(), senior:String(r[iS]??'').trim(),
+        lecturer:String(r[iL]??'').trim(),
+      });
+    }
+    return {
+      rows,
+      month: sheetMonth,
+      year: sheetYear
+    };
+  }
+  return null;
 }
 
 const ZONE_ORD = {'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十':10};
 
-// Convert "5/2" + "09:30" → sortable number (month*10000 + day*100 + hour*60 + min)
 function parseSortKey(row) {
   const dm = (row.date || '').match(/(\d{1,2})\/(\d{1,2})/);
   const tm = (row.time || '').match(/(\d{1,2}):(\d{2})/);
@@ -316,14 +361,41 @@ function parseSortKey(row) {
 
 function processFiles() {
   setStatus('');
+
+  let detectedYear = null;
+  let detectedMonth = null;
   const map = {};
   for (const f of files) {
-    const rows = parseWorkbook(f.wb);
-    if (!rows) { setStatus(`⚠ 無法解析「${f.name}」，請確認格式`); return; }
+    const res = parseWorkbook(f.wb, f.name);
+    if (!res) { setStatus(`⚠ 無法解析「${f.name}」，請確認格式`); return; }
+    
+    if (res.month && !detectedMonth) detectedMonth = res.month;
+    if (res.year && !detectedYear) detectedYear = res.year;
+    
     const z = f.zone || '?';
     if (!map[z]) map[z] = [];
-    map[z].push(...rows);
+    map[z].push(...res.rows);
   }
+
+  // Fallback to filename if not detected from sheet
+  if (!detectedYear || !detectedMonth) {
+    for (const f of files) {
+      const ym = f.name.match(/(\d{4})[-年](\d{1,2})[月份]/) || f.name.match(/(\d{2,4})[-年](\d{1,2})[月份]/);
+      if (ym) {
+        if (!detectedYear) detectedYear = parseInt(ym[1]);
+        if (!detectedMonth) detectedMonth = parseInt(ym[2]);
+      }
+    }
+  }
+
+  // Fallback if still not detected
+  if (!detectedYear || !detectedMonth) {
+    const d = new Date();
+    if (!detectedYear) detectedYear = d.getFullYear();
+    if (!detectedMonth) detectedMonth = d.getMonth() + 1;
+  }
+  resultTitle = `${detectedMonth}月份月例會時間`;
+
   // Collect all rows from all zones, sort by date then time
   const allRowsUnsorted = Object.values(map).flat();
   allRowsUnsorted.sort((a, b) => parseSortKey(a) - parseSortKey(b));

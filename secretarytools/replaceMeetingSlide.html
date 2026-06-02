@@ -579,9 +579,6 @@
                         alertBox.innerText = '✅ 簡報已儲存完成';
                     } catch (e) {
                         if (e.name !== 'AbortError') throw e;
-                        alertBox.innerText = '⚠️ 已取消儲存';
-                        alertBox.style.color = '#e67e22';
-                        alertBox.style.display = 'block';
                         return;
                     }
                 } else {

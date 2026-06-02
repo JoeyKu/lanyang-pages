@@ -399,10 +399,6 @@ fill_and_save('/seminar.xlsx', '/output.xlsx', names_list, """${escapePy(titleVa
                         alertBox.innerText = '✅ 簽到單已儲存完成';
                     } catch (e) {
                         if (e.name !== 'AbortError') throw e;
-                        alertBox.innerText = '⚠️ 已取消儲存';
-                        alertBox.style.color = '#e67e22';
-                        alertBox.style.background = '#fdebd0';
-                        alertBox.style.display = 'block';
                         return;
                     }
                 } else {

@@ -635,6 +635,7 @@ modify_docx(_date_str, _time_str, _room_str, _name_str, _chairman_str, _mc_str, 
                 alertBox.innerText = '✅ Word 檔修改完成並已下載';
                 alertBox.style.color = '#27ae60'; alertBox.style.display = 'block';
             } catch (err) {
+                if (err.name === 'AbortError') return;
                 console.error(err);
                 alertBox.innerText = '❌ 處理失敗：' + err.message;
                 alertBox.style.color = '#e74c3c'; alertBox.style.display = 'block';
@@ -716,6 +717,7 @@ modify_docx(_date_str, _time_str, _room_str, _name_str, _chairman_str, _mc_str, 
                 alertBox.innerText = '✅ 簡報已產生並下載';
                 alertBox.style.color = '#27ae60'; alertBox.style.display = 'block';
             } catch (err) {
+                if (err.name === 'AbortError') return;
                 console.error(err);
                 alertBox.innerText = '❌ 處理失敗：' + err.message;
                 alertBox.style.color = '#e74c3c'; alertBox.style.display = 'block';
@@ -731,7 +733,6 @@ modify_docx(_date_str, _time_str, _room_str, _name_str, _chairman_str, _mc_str, 
                     await w.write(blob); await w.close();
                     return;
                 } catch (e) {
-                    if (e.name === 'AbortError') { alertBox.innerText = '⚠️ 已取消儲存'; alertBox.style.color = '#e67e22'; alertBox.style.display = 'block'; throw e; }
                     throw e;
                 }
             }

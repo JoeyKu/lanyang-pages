@@ -666,11 +666,19 @@ def replace_pptx(input_path, mapping, output_path, report_path=None, doc_path=No
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
-def run_replace(year, month, speaker, supervisor, has_report, has_doc, has_proposal):
+def run_replace(year, month, speaker, supervisor, has_report, has_doc, has_proposal, master="", chairman="", name=""):
+    def format_chairman(c):
+        if c and len(c) == 3:
+            return f"{c[0]}  {c[1]}  {c[2]}"
+        return c or ""
+
     mapping = {
         "[[Title]]":    f"{year}年{month}月月例會",
         "[[宣講員]]":   speaker,
         "[[上級指導]]": supervisor,
+        "{master}":     master,
+        "{reporter}":   format_chairman(chairman),
+        "{branch}":     f"{name}分會" if name else "",
     }
     input_path = Path('/slide-template.pptx')
     output_path = Path('/output.pptx')
@@ -714,6 +722,9 @@ def main():
         "[[Title]]":    f"{args.year}年{args.month}月月例會",
         "[[宣講員]]":   args.speaker,
         "[[上級指導]]": args.supervisor,
+        "{master}":     "",
+        "{reporter}":   "",
+        "{branch}":     "",
     }
 
     replace_pptx(

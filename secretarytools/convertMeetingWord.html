@@ -318,15 +318,25 @@
 
                         <div class="input-row">
                             <div class="input-group">
-                                <label for="chairman">主席</label>
-                                <input type="text" id="chairman" name="chairman" placeholder="例如：OOO會長" required>
+                                <label for="master">輔導法師</label>
+                                <input type="text" id="master" name="master" placeholder="例如：OO法師">
                             </div>
-
+                            <div class="input-group">
+                                <label for="chairman">會長</label>
+                                <input type="text" id="chairman" name="chairman" placeholder="例如：OOO" required>
+                            </div>
+                            <div class="input-group">
+                                <label for="supervisor">上級指導</label>
+                                <input type="text" id="supervisor" name="supervisor" placeholder="例如：OOO 督導">
+                            </div>
+                            <div class="input-group">
+                                <label for="speaker">宣講員</label>
+                                <input type="text" id="speaker" name="speaker" placeholder="例如：OOO (三好分會)">
+                            </div>
                             <div class="input-group">
                                 <label for="mc">司儀</label>
                                 <input type="text" id="mc" name="mc" placeholder="例如：王小明" required>
                             </div>
-
                             <div class="input-group">
                                 <label for="computer">電腦</label>
                                 <input type="text" id="computer" name="computer" placeholder="例如：王小明" required>
@@ -337,25 +347,7 @@
                     <!-- ── 簡報設定 ── -->
                     <div class="section-block">
                         <div class="section-title">🎞 簡報設定</div>
-                        <div class="input-row">
-                            <div class="input-group">
-                                <label for="year">年份（民國）</label>
-                                <input type="number" id="year" name="year" placeholder="例如：115">
-                            </div>
-                            <div class="input-group">
-                                <label for="month">月份</label>
-                                <input type="number" id="month" name="month" placeholder="例如：4">
-                            </div>
-                            <div class="input-group">
-                                <label for="speaker">宣講員</label>
-                                <input type="text" id="speaker" name="speaker" placeholder="例如：OOO (三好分會)">
-                            </div>
-                            <div class="input-group">
-                                <label for="supervisor">上級指導</label>
-                                <input type="text" id="supervisor" name="supervisor" placeholder="例如：OOO 督導">
-                            </div>
-                        </div>
-                        <div class="input-group" style="margin-top:18px; margin-bottom:0;">
+                        <div class="input-group" style="margin-bottom:0;">
                             <label for="templateFile">公版簡報 <span style="color:#e74c3c;">.pptx</span></label>
                             <div id="templateStatus" style="font-size:14px; margin-bottom:6px; color:var(--text-secondary);">連線中，檢查伺服器公版檔案...</div>
                             <div class="file-drop-area" id="templateDropArea">
@@ -419,9 +411,9 @@
         const loadingMsg = document.getElementById('loadingMsg');
         const alertBox   = document.getElementById('alertBox');
 
-        const WORD_LS  = ['time', 'room', 'name', 'chairman', 'mc', 'computer'];
-        const SLIDE_LS = ['year', 'month', 'speaker', 'supervisor'];
-        const LS_FIELDS = [...WORD_LS, ...SLIDE_LS]; // kept for compatibility
+        const WORD_LS  = ['time', 'room', 'name', 'master', 'chairman', 'supervisor', 'speaker', 'mc', 'computer'];
+        const SLIDE_LS = [];
+        const LS_FIELDS = WORD_LS;
 
         function saveToLocalStorage() {
             WORD_LS.forEach(id  => localStorage.setItem('meeting_' + id, document.getElementById(id).value));
@@ -443,15 +435,7 @@
             document.getElementById(id).addEventListener('input', saveToLocalStorage);
         });
 
-        // Auto-fill year/month from date field
-        document.getElementById('date').addEventListener('change', function () {
-            if (!this.value) return;
-            const d = new Date(this.value + 'T00:00:00');
-            const yearEl  = document.getElementById('year');
-            const monthEl = document.getElementById('month');
-            if (!yearEl.value)  yearEl.value  = d.getFullYear() - 1911;
-            if (!monthEl.value) monthEl.value = d.getMonth() + 1;
-        });
+        // Auto-fill year/month from date field (removed, calculated dynamically)
 
         function validateDate(dateStr) {
             if (!dateStr) return false;
@@ -545,14 +529,17 @@
         // ── Shared: collect form values ──────────────────────────────────
         function getWordVals() {
             return {
-                date:     document.getElementById('date').value.trim(),
-                time:     document.getElementById('time').value.trim(),
-                room:     document.getElementById('room').value.trim(),
-                name:     document.getElementById('name').value.trim(),
-                chairman: document.getElementById('chairman').value.trim(),
-                mc:       document.getElementById('mc').value.trim(),
-                computer: document.getElementById('computer').value.trim(),
-                file:     document.getElementById('file'),
+                date:       document.getElementById('date').value.trim(),
+                time:       document.getElementById('time').value.trim(),
+                room:       document.getElementById('room').value.trim(),
+                name:       document.getElementById('name').value.trim(),
+                master:     document.getElementById('master') ? document.getElementById('master').value.trim() : '',
+                chairman:   document.getElementById('chairman').value.trim(),
+                supervisor: document.getElementById('supervisor') ? document.getElementById('supervisor').value.trim() : '',
+                speaker:    document.getElementById('speaker') ? document.getElementById('speaker').value.trim() : '',
+                mc:         document.getElementById('mc').value.trim(),
+                computer:   document.getElementById('computer').value.trim(),
+                file:       document.getElementById('file'),
             };
         }
 
@@ -589,14 +576,17 @@
             pyodide.globals.set('_time_str',           v.time);
             pyodide.globals.set('_room_str',           v.room);
             pyodide.globals.set('_name_str',           v.name);
+            pyodide.globals.set('_master_str',         v.master);
             pyodide.globals.set('_chairman_str',       v.chairman);
+            pyodide.globals.set('_supervisor_str',     v.supervisor);
+            pyodide.globals.set('_speaker_str',        v.speaker);
             pyodide.globals.set('_mc_str',             v.mc);
             pyodide.globals.set('_computer_str',       v.computer);
             pyodide.globals.set('_effectiveness_json', JSON.stringify(eff));
 
             await pyodide.runPythonAsync(`
 _effectiveness_list = json.loads(_effectiveness_json)
-modify_docx(_date_str, _time_str, _room_str, _name_str, _chairman_str, _mc_str, _computer_str, _effectiveness_list)
+modify_docx(_date_str, _time_str, _room_str, _name_str, _master_str, _chairman_str, _supervisor_str, _speaker_str, _mc_str, _computer_str, _effectiveness_list)
 `);
         }
 
@@ -647,14 +637,21 @@ modify_docx(_date_str, _time_str, _room_str, _name_str, _chairman_str, _mc_str, 
             const v = getWordVals();
             if (!validateWordVals(v)) return;
 
-            const yearVal       = document.getElementById('year').value.trim();
-            const monthVal      = document.getElementById('month').value.trim();
-            const speakerVal    = document.getElementById('speaker').value.trim();
-            const supervisorVal = document.getElementById('supervisor').value.trim();
+            const dateVal       = document.getElementById('date').value.trim();
+            if (!dateVal) {
+                alertBox.innerText = '❌ 請填寫日期以換算年份與月份';
+                alertBox.style.color = '#e74c3c'; alertBox.style.display = 'block'; return;
+            }
+            const d = new Date(dateVal + 'T00:00:00');
+            const yearVal       = String(d.getFullYear() - 1911);
+            const monthVal      = String(d.getMonth() + 1);
+
+            const speakerVal    = v.speaker;
+            const supervisorVal = v.supervisor;
             const templateInput = document.getElementById('templateFile');
 
-            if (!yearVal || !monthVal || !speakerVal || !supervisorVal) {
-                alertBox.innerText = '❌ 請填寫簡報設定（年份、月份、宣講員、上級指導）';
+            if (!speakerVal || !supervisorVal) {
+                alertBox.innerText = '❌ 請填寫宣講員與上級指導';
                 alertBox.style.color = '#e74c3c'; alertBox.style.display = 'block'; return;
             }
             if (!templateInput.files[0] && !preloadedTemplateBuffer) {
@@ -696,8 +693,16 @@ modify_docx(_date_str, _time_str, _room_str, _name_str, _chairman_str, _mc_str, 
 
                 // Step 6: Run slide tool
                 await pyodide.runPythonAsync(pySlideScript);
+                
+                // Escape single quotes for python string interpolation
+                const safeSpeaker = speakerVal.replace(/'/g, "\\'");
+                const safeSupervisor = supervisorVal.replace(/'/g, "\\'");
+                const safeMaster = v.master.replace(/'/g, "\\'");
+                const safeChairman = v.chairman.replace(/'/g, "\\'");
+                const safeName = v.name.replace(/'/g, "\\'");
+
                 const resultText = await pyodide.runPythonAsync(
-                    `run_replace('${yearVal}', '${monthVal}', '${speakerVal}', '${supervisorVal}', ${hasReport ? 'True' : 'False'}, True, ${hasProposal ? 'True' : 'False'})`
+                    `run_replace('${yearVal}', '${monthVal}', '${safeSpeaker}', '${safeSupervisor}', ${hasReport ? 'True' : 'False'}, True, ${hasProposal ? 'True' : 'False'}, '${safeMaster}', '${safeChairman}', '${safeName}')`
                 );
 
                 if (resultText && resultText.trim()) {
@@ -710,7 +715,7 @@ modify_docx(_date_str, _time_str, _room_str, _name_str, _chairman_str, _mc_str, 
                 const blob = new Blob([outputData], {
                     type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
                 });
-                const newName = `${yearVal}年${monthVal}月例會.pptx`;
+                const newName = `${yearVal}年${monthVal}月月例會.pptx`;
                 await saveBlobAs(blob, newName, 'PowerPoint 簡報',
                     { 'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'] });
 
@@ -1114,7 +1119,7 @@ def delete_tables_in_proposals_section(doc):
     for tc in doc.element.body.findall('.//{%s}tc' % W_NS):
         process_container(tc)
 
-def modify_docx(date_str, time_str, room_str, name_str, chairman_str, mc_str, computer_str, effectiveness_list):
+def modify_docx(date_str, time_str, room_str, name_str, master_str, chairman_str, supervisor_str, speaker_str, mc_str, computer_str, effectiveness_list):
     doc = Document('/input.docx')
 
     table = doc.tables[0]
@@ -1122,8 +1127,8 @@ def modify_docx(date_str, time_str, room_str, name_str, chairman_str, mc_str, co
     # Row 0, Col 0：日期區塊
     set_cell_text(table.rows[0].cells[0], format_date_cell(date_str, time_str, room_str))
 
-    # Row 0, Col 2：主席 / 司儀 / 電腦
-    role_text = f"主席：{chairman_str}\\n司儀：{mc_str}\\n電腦：{computer_str}"
+    # Row 0, Col 2：會議人員
+    role_text = f"輔導法師：{master_str}\\n主席：{chairman_str}\\n上級指導：{supervisor_str}\\n宣講員：{speaker_str}\\n司儀：{mc_str}\\n電腦：{computer_str}"
     set_cell_text(table.rows[0].cells[2], role_text)
 
     # Row 3, Col 0
@@ -1159,8 +1164,8 @@ def modify_docx(date_str, time_str, room_str, name_str, chairman_str, mc_str, co
         async function initPyodide() {
             preloadTemplate();
             try {
-                // Fetch slide Python script
-                const resp = await fetch('./meeting_slide_tool.py');
+                // Fetch slide Python script with cache buster
+                const resp = await fetch('./meeting_slide_tool.py?v=' + new Date().getTime());
                 pySlideScript = await resp.text();
 
                 pyodide = await loadPyodide();

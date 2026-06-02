@@ -661,7 +661,7 @@
             preloadTemplate();
             try {
                 // Fetch the python script
-                const resp = await fetch('./meeting_slide_tool.py');
+                const resp = await fetch('./meeting_slide_tool.py?v=' + new Date().getTime());
                 pyScript = await resp.text();
 
                 pyodide = await loadPyodide();

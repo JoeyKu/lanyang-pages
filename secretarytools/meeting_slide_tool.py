@@ -273,9 +273,20 @@ def _set_rel(part, rId, reltype, target, is_external=False):
 
 
 def _collect_used_partnames(prs):
+    """收集目前簡報中所有已使用的 media partname，包含投影片、母片、版面配置。"""
     names = set()
     for slide in prs.slides:
         for rel in slide.part.rels.values():
+            if not rel.is_external:
+                names.add(str(rel.target_part.partname))
+    # 也收集 slide masters 和 slide layouts 的 media partname，
+    # 避免插入外部投影片時 partname 衝突造成 ZIP 內重複條目
+    for master in prs.slide_masters:
+        for rel in master.part.rels.values():
+            if not rel.is_external:
+                names.add(str(rel.target_part.partname))
+    for layout in prs.slide_layouts:
+        for rel in layout.part.rels.values():
             if not rel.is_external:
                 names.add(str(rel.target_part.partname))
     return names

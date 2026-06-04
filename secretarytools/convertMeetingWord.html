@@ -1128,7 +1128,7 @@ def modify_docx(date_str, time_str, room_str, name_str, master_str, chairman_str
     set_cell_text(table.rows[0].cells[0], format_date_cell(date_str, time_str, room_str))
 
     # Row 0, Col 2：會議人員
-    role_text = f"輔導法師：{master_str}\\n主席：{chairman_str}\\n上級指導：{supervisor_str}\\n宣講員：{speaker_str}\\n司儀：{mc_str}\\n電腦：{computer_str}"
+    role_text = f"輔導法師：{master_str}\\n主席：{chairman_str}\\n司儀：{mc_str}      電腦：{computer_str}"
     set_cell_text(table.rows[0].cells[2], role_text)
 
     # Row 3, Col 0

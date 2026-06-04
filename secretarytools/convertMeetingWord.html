@@ -229,6 +229,42 @@
             border-color: rgba(90, 122, 159, 0.22);
         }
 
+        /* ── Manual-edit toggle ── */
+        .manual-edit-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 12px;
+            padding: 10px 14px;
+            background: #fff;
+            border: 1px solid rgba(168, 122, 79, 0.15);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: var(--transition);
+            user-select: none;
+        }
+        .manual-edit-toggle:hover {
+            background: #fdf8f2;
+            border-color: var(--accent-color);
+        }
+        .manual-edit-toggle input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--primary-color);
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .manual-edit-toggle .toggle-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+        .manual-edit-toggle .toggle-hint {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-left: auto;
+        }
+
         @media (max-width: 640px) {
             body { padding: 20px 15px; }
             .tool-card { padding: 25px 20px; }
@@ -282,6 +318,11 @@
                     <!-- ── 宣讀上次決議案執行成效 ── -->
                     <div id="proposalsSection" style="display:none; margin-bottom: 20px;">
                         <div class="section-title">📋 宣讀上次決議案執行成效</div>
+                        <label class="manual-edit-toggle">
+                            <input type="checkbox" id="manualEditToggle" checked>
+                            <span class="toggle-label">手動修改資料</span>
+                            <span class="toggle-hint" id="manualEditHint">✏️ 可自行填寫執行成效</span>
+                        </label>
                         <div id="proposalsList"></div>
                     </div>
 
@@ -524,6 +565,8 @@
                 list.appendChild(card);
             });
             section.style.display = 'block';
+            // Apply current manual-edit toggle state to newly rendered cards
+            applyManualEditState();
         }
 
         // ── Shared: collect form values ──────────────────────────────────
@@ -559,18 +602,40 @@
             return true;
         }
 
+        // ── Manual-edit toggle logic ─────────────────────────────────────
+        function isManualEdit() {
+            return document.getElementById('manualEditToggle').checked;
+        }
+
+        function applyManualEditState() {
+            const checked = isManualEdit();
+            const hint = document.getElementById('manualEditHint');
+            // Toggle all proposal textareas
+            document.querySelectorAll('#proposalsList .proposal-card .input-group').forEach(g => {
+                g.style.display = checked ? '' : 'none';
+            });
+            if (hint) {
+                hint.textContent = checked ? '✏️ 可自行填寫執行成效' : '📎 保留原始文件內容';
+            }
+        }
+
+        document.getElementById('manualEditToggle').addEventListener('change', applyManualEditState);
+
         // ── Core: process Word → /output.docx ───────────────────────────
         async function processWord(v) {
             const file = v.file.files[0];
             const fileData = await file.arrayBuffer();
             pyodide.FS.writeFile('/input.docx', new Uint8Array(fileData));
 
+            const manualEdit = isManualEdit();
             const proposalCards = document.querySelectorAll('#proposalsList .proposal-card');
             const eff = [];
-            proposalCards.forEach((_, i) => {
-                const ta = document.getElementById(`effectiveness_${i}`);
-                eff.push(ta ? ta.value.trim() : '');
-            });
+            if (manualEdit) {
+                proposalCards.forEach((_, i) => {
+                    const ta = document.getElementById(`effectiveness_${i}`);
+                    eff.push(ta ? ta.value.trim() : '');
+                });
+            }
 
             pyodide.globals.set('_date_str',           v.date);
             pyodide.globals.set('_time_str',           v.time);
@@ -583,10 +648,11 @@
             pyodide.globals.set('_mc_str',             v.mc);
             pyodide.globals.set('_computer_str',       v.computer);
             pyodide.globals.set('_effectiveness_json', JSON.stringify(eff));
+            pyodide.globals.set('_manual_edit',        manualEdit);
 
             await pyodide.runPythonAsync(`
 _effectiveness_list = json.loads(_effectiveness_json)
-modify_docx(_date_str, _time_str, _room_str, _name_str, _master_str, _chairman_str, _supervisor_str, _speaker_str, _mc_str, _computer_str, _effectiveness_list)
+modify_docx(_date_str, _time_str, _room_str, _name_str, _master_str, _chairman_str, _supervisor_str, _speaker_str, _mc_str, _computer_str, _effectiveness_list, manual_edit=_manual_edit)
 `);
         }
 
@@ -689,6 +755,17 @@ modify_docx(_date_str, _time_str, _room_str, _name_str, _master_str, _chairman_s
                     hasProposal = true;
                 }
 
+                // Step 5.5: If not manual edit, use the uploaded 聯合月例會 pptx
+                // to extract 宣讀上次決議案執行成效 slides
+                const manualEdit = isManualEdit();
+                let hasEffectivenessSlides = false;
+                if (!manualEdit && proposalInput.files[0]) {
+                    // The 聯合月例會 pptx (proposalFile) is already written as /proposal.pptx
+                    // We'll write it also as /effectiveness_src.pptx for the slide extraction
+                    pyodide.FS.writeFile('/effectiveness_src.pptx', new Uint8Array(await proposalInput.files[0].arrayBuffer()));
+                    hasEffectivenessSlides = true;
+                }
+
                 loadingMsg.textContent = '簡報產生中...';
 
                 // Step 6: Run slide tool
@@ -701,8 +778,10 @@ modify_docx(_date_str, _time_str, _room_str, _name_str, _master_str, _chairman_s
                 const safeChairman = v.chairman.replace(/'/g, "\\'");
                 const safeName = v.name.replace(/'/g, "\\'");
 
+                // When not manual edit, skip doc-based proposal slide generation
+                const useDocProposal = manualEdit;
                 const resultText = await pyodide.runPythonAsync(
-                    `run_replace('${yearVal}', '${monthVal}', '${safeSpeaker}', '${safeSupervisor}', ${hasReport ? 'True' : 'False'}, True, ${hasProposal ? 'True' : 'False'}, '${safeMaster}', '${safeChairman}', '${safeName}')`
+                    `run_replace('${yearVal}', '${monthVal}', '${safeSpeaker}', '${safeSupervisor}', ${hasReport ? 'True' : 'False'}, ${useDocProposal ? 'True' : 'False'}, ${hasProposal ? 'True' : 'False'}, '${safeMaster}', '${safeChairman}', '${safeName}', ${hasEffectivenessSlides ? 'True' : 'False'})`
                 );
 
                 if (resultText && resultText.trim()) {
@@ -1119,7 +1198,7 @@ def delete_tables_in_proposals_section(doc):
     for tc in doc.element.body.findall('.//{%s}tc' % W_NS):
         process_container(tc)
 
-def modify_docx(date_str, time_str, room_str, name_str, master_str, chairman_str, supervisor_str, speaker_str, mc_str, computer_str, effectiveness_list):
+def modify_docx(date_str, time_str, room_str, name_str, master_str, chairman_str, supervisor_str, speaker_str, mc_str, computer_str, effectiveness_list, manual_edit=True):
     doc = Document('/input.docx')
 
     table = doc.tables[0]
@@ -1151,11 +1230,11 @@ def modify_docx(date_str, time_str, room_str, name_str, master_str, chairman_str
     # 刪除文字框
     delete_textbox_containing(doc, "聯合月例會】")
 
-    # 刪除提案區塊內的表格
-    delete_tables_in_proposals_section(doc)
-
-    # 替換執行成效
-    replace_effectiveness_in_doc(doc, effectiveness_list)
+    if manual_edit:
+        # 手動修改模式：刪除提案區塊內的表格，並替換執行成效
+        delete_tables_in_proposals_section(doc)
+        replace_effectiveness_in_doc(doc, effectiveness_list)
+    # 非手動修改模式：保留原始內容（表格、圖片等）
 
     doc.save('/output.docx')
     return True

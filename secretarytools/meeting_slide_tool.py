@@ -542,6 +542,68 @@ def insert_external_proposal_slides(dest_prs, src_path, start_keyword="提案討
     print(f"   ✅ 提案簡報插入完成（共 {len(slides_to_insert)} 張）")
 
 
+def _slide_text_normalized(slide):
+    """Return slide text with all whitespace/newlines collapsed for keyword matching."""
+    raw = _slide_text(slide)
+    return raw.replace('\n', '').replace('\r', '').replace(' ', '').replace('\u3000', '')
+
+
+def insert_effectiveness_slides(dest_prs, src_path, start_keyword="決議案執行成效", end_keyword="工作報告"):
+    """從來源 pptx 擷取「宣讀上次決議案執行成效」至「工作報告」之間的投影片，
+    插入到目標 pptx 的相同位置。"""
+    path_str = str(src_path)
+    if not os.path.exists(path_str):
+        print(f"⚠️ 找不到決議案執行成效來源檔案：{path_str}", file=sys.stderr)
+        return
+
+    try:
+        src_prs = Presentation(path_str)
+    except Exception as e:
+        print(f"❌ 無法開啟決議案執行成效來源檔案 {path_str}：{e}", file=sys.stderr)
+        return
+
+    # 在來源簡報中找「決議案執行成效」與「工作報告」的位置
+    # 使用 normalized text 進行比對，以處理標題跨行的情況
+    start_idx = -1
+    end_idx = len(src_prs.slides)
+
+    for i, slide in enumerate(src_prs.slides):
+        text_norm = _slide_text_normalized(slide)
+        if start_idx == -1 and start_keyword in text_norm:
+            start_idx = i
+        elif start_idx != -1 and end_keyword in text_norm:
+            end_idx = i
+            break
+
+    if start_idx == -1:
+        print(f"⚠️  在來源檔案中找不到「{start_keyword}」標題，跳過插入。", file=sys.stderr)
+        return
+
+    slides_to_insert = list(src_prs.slides)[start_idx + 1:end_idx]
+    if not slides_to_insert:
+        print(f"⚠️  「{start_keyword}」至「{end_keyword}」之間沒有投影片，跳過插入。", file=sys.stderr)
+        return
+
+    print(f"📋 從來源擷取「{start_keyword}」至「{end_keyword}」（共 {len(slides_to_insert)} 張）...")
+
+    # 在目標簡報中找插入點
+    # 目標簡報也使用 normalized text 以確保能匹配
+    dest_idx = next(
+        (i for i, s in enumerate(dest_prs.slides) if start_keyword in _slide_text_normalized(s)), None
+    )
+    if dest_idx is None:
+        print(f"⚠️  目標簡報中找不到「{start_keyword}」的分隔投影片，將附加到最後。", file=sys.stderr)
+        dest_idx = len(dest_prs.slides) - 1
+
+    used_partnames = _collect_used_partnames(dest_prs)
+
+    for offset, src_slide in enumerate(slides_to_insert):
+        _insert_slide(dest_prs, src_slide, after_index=dest_idx + offset,
+                      used_partnames=used_partnames)
+
+    print(f"   ✅ 決議案執行成效投影片插入完成（共 {len(slides_to_insert)} 張）")
+
+
 def extract_proposal_summary_text(doc_path):
     """
     從 Word 文檔中擷取特定提案文字的總結。
@@ -652,7 +714,7 @@ def extract_proposal_summary_text(doc_path):
 
 # ── 主流程 ────────────────────────────────────────────────────────────────────
 
-def replace_pptx(input_path, mapping, output_path, report_path=None, doc_path=None, proposal_path=None, debug=False):
+def replace_pptx(input_path, mapping, output_path, report_path=None, doc_path=None, proposal_path=None, effectiveness_src_path=None, debug=False):
     try:
         prs = Presentation(str(input_path))
     except Exception as e:
@@ -669,6 +731,8 @@ def replace_pptx(input_path, mapping, output_path, report_path=None, doc_path=No
         insert_report_slides(prs, report_path)
     if proposal_path is not None:
         insert_external_proposal_slides(prs, proposal_path)
+    if effectiveness_src_path is not None:
+        insert_effectiveness_slides(prs, effectiveness_src_path)
     if doc_path is not None:
         insert_proposal_slides(prs, doc_path, debug)
     prs.save(str(output_path))
@@ -677,7 +741,7 @@ def replace_pptx(input_path, mapping, output_path, report_path=None, doc_path=No
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
-def run_replace(year, month, speaker, supervisor, has_report, has_doc, has_proposal, master="", chairman="", name=""):
+def run_replace(year, month, speaker, supervisor, has_report, has_doc, has_proposal, master="", chairman="", name="", has_effectiveness_slides=False):
     def format_chairman(c):
         if c and len(c) == 3:
             return f"{c[0]}  {c[1]}  {c[2]}"
@@ -696,8 +760,9 @@ def run_replace(year, month, speaker, supervisor, has_report, has_doc, has_propo
     report_path = Path('/report.pptx') if has_report else None
     doc_path = Path('/doc.docx') if has_doc else None
     proposal_path = Path('/proposal.pptx') if has_proposal else None
+    effectiveness_src_path = Path('/effectiveness_src.pptx') if has_effectiveness_slides else None
     
-    replace_pptx(input_path, mapping, output_path, report_path=report_path, doc_path=doc_path, proposal_path=proposal_path, debug=False)
+    replace_pptx(input_path, mapping, output_path, report_path=report_path, doc_path=doc_path, proposal_path=proposal_path, effectiveness_src_path=effectiveness_src_path, debug=False)
     
     # 擷取文字回傳給前端
     summary_text = ""

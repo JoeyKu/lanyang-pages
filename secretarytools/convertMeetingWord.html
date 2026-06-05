@@ -610,9 +610,9 @@
         function applyManualEditState() {
             const checked = isManualEdit();
             const hint = document.getElementById('manualEditHint');
-            // Toggle all proposal textareas
-            document.querySelectorAll('#proposalsList .proposal-card .input-group').forEach(g => {
-                g.style.display = checked ? '' : 'none';
+            // Toggle all proposal cards and textareas
+            document.querySelectorAll('#proposalsList .proposal-card').forEach(card => {
+                card.style.display = checked ? '' : 'none';
             });
             if (hint) {
                 hint.textContent = checked ? '✏️ 可自行填寫執行成效' : '📎 保留原始文件內容';
@@ -779,9 +779,10 @@ modify_docx(_date_str, _time_str, _room_str, _name_str, _master_str, _chairman_s
                 const safeName = v.name.replace(/'/g, "\\'");
 
                 // When not manual edit, skip doc-based proposal slide generation
+                // But always pass has_doc=True so summary text is generated (with table resolution for branch name)
                 const useDocProposal = manualEdit;
                 const resultText = await pyodide.runPythonAsync(
-                    `run_replace('${yearVal}', '${monthVal}', '${safeSpeaker}', '${safeSupervisor}', ${hasReport ? 'True' : 'False'}, ${useDocProposal ? 'True' : 'False'}, ${hasProposal ? 'True' : 'False'}, '${safeMaster}', '${safeChairman}', '${safeName}', ${hasEffectivenessSlides ? 'True' : 'False'})`
+                    `run_replace('${yearVal}', '${monthVal}', '${safeSpeaker}', '${safeSupervisor}', ${hasReport ? 'True' : 'False'}, ${useDocProposal ? 'True' : 'False'}, ${hasProposal ? 'True' : 'False'}, '${safeMaster}', '${safeChairman}', '${safeName}', ${hasEffectivenessSlides ? 'True' : 'False'}, True)`
                 );
 
                 if (resultText && resultText.trim()) {

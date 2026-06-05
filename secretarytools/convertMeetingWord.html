@@ -319,7 +319,7 @@
                     <div id="proposalsSection" style="display:none; margin-bottom: 20px;">
                         <div class="section-title">📋 宣讀上次決議案執行成效</div>
                         <label class="manual-edit-toggle">
-                            <input type="checkbox" id="manualEditToggle" checked>
+                            <input type="checkbox" id="manualEditToggle">
                             <span class="toggle-label">手動修改資料</span>
                             <span class="toggle-hint" id="manualEditHint">✏️ 可自行填寫執行成效</span>
                         </label>
@@ -1275,9 +1275,64 @@ def modify_docx(date_str, time_str, room_str, name_str, master_str, chairman_str
             }
         }
 
+        async function preloadDefaultFiles() {
+            async function preloadFile(url, inputId, nameId, filename) {
+                const input = document.getElementById(inputId);
+                const nameEl = document.getElementById(nameId);
+                const area = input.closest('.file-drop-area');
+                const defaultTxt = area.querySelector('.file-drop-text');
+                
+                try {
+                    if (defaultTxt) defaultTxt.style.display = 'none';
+                    nameEl.innerHTML = '<span class="spinner" style="width: 14px; height: 14px; border-width: 2px; vertical-align: middle; margin-right: 6px; border-top-color: var(--primary-color);"></span> 載入預設檔案中...';
+                    area.style.borderColor = 'var(--accent-color)';
+                    area.style.background = 'rgba(212,163,115,0.05)';
+
+                    const res = await fetch(url);
+                    if (!res.ok) throw new Error(`Status ${res.status}`);
+                    const blob = await res.blob();
+                    const file = new File([blob], filename, { type: blob.type || 'application/octet-stream' });
+                    
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(file);
+                    input.files = dataTransfer.files;
+                    
+                    nameEl.textContent = '已自動載入預設：' + filename;
+                    area.style.borderColor = 'var(--primary-color)';
+                    area.style.background  = 'rgba(168,122,79,0.05)';
+                    
+                    input.dispatchEvent(new Event('change'));
+                } catch (err) {
+                    console.log(`No preloaded default file for ${filename} at ${url} (${err.message})`);
+                    nameEl.textContent = '';
+                    area.style.borderColor = '';
+                    area.style.background = '';
+                    if (defaultTxt) defaultTxt.style.display = 'block';
+                }
+            }
+
+            try {
+                const res = await fetch('./default-files/index.json');
+                if (!res.ok) throw new Error(`Failed to load index.json: ${res.status}`);
+                const index = await res.json();
+                
+                const promises = [];
+                if (index.docx) {
+                    promises.push(preloadFile('./default-files/' + index.docx, 'file', 'wordFileName', index.docx));
+                }
+                if (index.pptx) {
+                    promises.push(preloadFile('./default-files/' + index.pptx, 'proposalFile', 'proposalFileName', index.pptx));
+                }
+                await Promise.all(promises);
+            } catch (err) {
+                console.log('Failed to preload default files using index.json:', err.message);
+            }
+        }
+
         window.addEventListener('load', () => {
             loadFromLocalStorage();
             initPyodide();
+            preloadDefaultFiles();
 
             // ── File drop areas (Word + PPTX) ─────────────────────────
             [['file','wordFileName'], ['templateFile','templateFileName'], ['reportFile','reportFileName'], ['proposalFile','proposalFileName']]

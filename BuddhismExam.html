@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>國際佛光會 2026 年全球佛學會考題庫</title>
+    <style>
+        :root {
+            --primary-bg: #fdfaf3;
+            --secondary-bg: #ffffff;
+            --text-color: #3d2c1b;
+            --primary-color: #a87a4f;
+            --accent-color: #d4a373;
+            --correct-color: #4CAF50;
+            --incorrect-color: #F44336;
+            /* 新增題型顏色 */
+            --type-tf-bg: #3498db;  /* 是非題: 藍色 */
+            --type-sc-bg: #2ecc71;  /* 單選題: 綠色 */
+            --type-mc-bg: #f39c12;  /* 複選題: 橘色 */
+            --font-family: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+        }
+        body {
+            font-family: var(--font-family);
+            background-color: var(--primary-bg);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background-color: var(--secondary-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            padding: 20px 40px;
+            box-sizing: border-box;
+            margin: 20px 0;
+        }
+        h1, h2 {
+            color: var(--primary-color);
+            text-align: center;
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 10px;
+        }
+        h1 { font-size: 1.8em; }
+        h2 { font-size: 1.5em; margin-top: 30px; }
+        .hidden { display: none !important; }
+        #mock-exam-btn-container { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
+        #start-mock-exam-btn {
+            background-color: #8B4513; color: white; border: none; padding: 15px 30px;
+            border-radius: 8px; cursor: pointer; font-size: 1.2em; font-weight: bold;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+        #practice-menu-container .unit { margin-bottom: 25px; }
+        #practice-menu-container .quiz-type-buttons { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+        #practice-menu-container button {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 10px 20px; border-radius: 8px; cursor: pointer;
+            font-size: 1em; transition: background-color 0.3s, transform 0.2s; flex-grow: 1;
+        }
+        #quiz-header { text-align: center; margin-bottom: 20px; font-size: 1.2em; font-weight: bold; }
+        #question-progress { text-align: right; font-size: 0.9em; color: #888; margin-bottom: 10px; }
+        #question-text {
+            font-size: 1.3em; line-height: 1.8; margin-bottom: 25px; padding: 15px;
+            background-color: #f9f9f9; border-left: 5px solid var(--accent-color);
+        }
+        .option-btn {
+            font-size: 1.1em; width: 100%; padding: 15px; text-align: left; background-color: #fff;
+            color: var(--text-color); border: 2px solid var(--accent-color); border-radius: 8px;
+            cursor: pointer; transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+            display: flex; align-items: center;
+        }
+        #options-container { display: grid; gap: 15px; }
+        .option-btn::before {
+            content: ''; width: 1.2em; height: 1.2em; margin-right: 10px; background-size: contain;
+            background-repeat: no-repeat; background-position: center; transition: background-image 0.2s;
+            flex-shrink: 0;
+        }
+        .option-btn.selected { background-color: var(--primary-color); color: white; border-color: var(--primary-color); }
+        .option-btn.selected::before {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z'/%3E%3C/svg%3E");
+        }
+
+        .question-type-tag {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            color: white;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+        .question-type-tag.tf { background-color: var(--type-tf-bg); }
+        .question-type-tag.sc { background-color: var(--type-sc-bg); }
+        .question-type-tag.mc { background-color: var(--type-mc-bg); }
+
+        /* === 主要修正區域：為高亮樣式添加 !important === */
+        .option-btn.correct {
+            background-color: var(--correct-color) !important; /* 確保此樣式生效 */
+            border-color: var(--correct-color) !important;
+            color: white !important;
+        }
+        .option-btn.incorrect {
+            background-color: var(--incorrect-color) !important; /* 確保此樣式生效 */
+            border-color: var(--incorrect-color) !important;
+            color: white !important;
+        }
+        /* === 修正結束 === */
+
+        #navigation-btns, #practice-nav, #exam-nav { margin-top: 25px; display: flex; justify-content: center; gap: 15px; }
+        #exam-nav { justify-content: space-between; }
+        #practice-nav, #exam-nav { width: 100%; }
+        #prev-btn, #next-btn-practice, #next-btn-exam, #submit-exam-btn, #retry-btn, #submit-answer-btn {
+            background-color: var(--primary-color); color: white; border: none; padding: 12px 25px;
+            border-radius: 8px; cursor: pointer; font-size: 1.1em; flex-grow: 1; transition: background-color 0.3s;
+        }
+        #submit-exam-btn, #retry-btn, #submit-answer-btn { background-color: var(--correct-color); }
+        button:disabled { background-color: #ccc !important; cursor: not-allowed !important; transform: none !important; }
+        #feedback { margin-top: 20px; padding: 15px; border-radius: 8px; font-size: 1.1em; font-weight: bold; text-align: center; }
+        .feedback-correct { background-color: #e8f5e9; color: var(--correct-color); }
+        .feedback-incorrect { background-color: #ffebee; color: var(--incorrect-color); }
+        #results-container h2 { margin-bottom: 15px; }
+        #results-summary { font-size: 1.5em; line-height: 1.8; margin-bottom: 20px; text-align: center; font-weight: bold; }
+        #results-list { list-style: none; padding: 0; }
+        #results-list li {
+            border: 2px solid transparent; background-color: #f9f9f9; border-left: 5px solid var(--primary-color);
+            margin-bottom: 20px; padding: 15px; border-radius: 8px;
+        }
+        .result-item-incorrect {
+            background-color: #ffebee; border: 2px solid var(--incorrect-color) !important;
+            border-left-width: 5px !important;
+        }
+        .result-question { font-weight: bold; margin-bottom: 10px; }
+        .result-answer { margin-bottom: 5px; }
+        .result-answer span { font-weight: bold; }
+        .user-answer-incorrect { color: var(--incorrect-color); text-decoration: line-through; }
+        .correct-answer { color: var(--correct-color); }
+        .result-points { text-align: right; font-weight: bold; }
+        #back-to-menu-btn {
+            position: fixed; bottom: 20px; right: 20px; z-index: 1000;
+            background-color: #f0f0f0; color: #333; border: 1px solid #adadad;
+            padding: 8px 16px; border-radius: 6px; cursor: pointer;
+            font-size: 1em; box-shadow: 0 2px 5px rgba(0,0,0,0.15); transition: background-color 0.2s;
+        }
+        @media (hover: hover) {
+            #start-mock-exam-btn:hover { background-color: #A0522D; transform: translateY(-2px); }
+            #practice-menu-container button:hover { background-color: var(--accent-color); transform: translateY(-2px); }
+            .option-btn:hover:not(:disabled) { background-color: var(--accent-color); color: white; border-color: var(--accent-color); }
+            .option-btn.selected:hover:not(:disabled) { background-color: #8a6a4a; }
+            #prev-btn:hover, #next-btn-practice:hover, #next-btn-exam:hover, #submit-answer-btn:hover { background-color: var(--accent-color); }
+            #submit-exam-btn:hover, #retry-btn:hover { background-color: #388e3c; }
+            #back-to-menu-btn:hover { background-color: #e0e0e0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="main-container">
+        <!-- Menu container -->
+        <div id="menu-container">
+             <h1>國際佛光會 2026 年全球佛學會考題庫</h1>
+             <h2>《當代人心思潮》</h2>
+             <div id="mock-exam-btn-container">
+                 <button id="start-mock-exam-btn">開始模擬測驗</button>
+             </div>
+             <div id="practice-menu-container"></div>
+        </div>
+
+        <!-- Quiz container -->
+        <div id="quiz-container" class="hidden">
+            <h2 id="quiz-header"></h2>
+            <div id="question-progress"></div>
+            <p id="question-text"></p>
+            <div id="options-container"></div>
+            <div id="feedback" class="hidden"></div>
+            <div id="navigation-btns">
+                <div id="exam-nav" class="hidden">
+                    <button id="prev-btn">上一題</button>
+                    <button id="next-btn-exam">下一題</button>
+                    <button id="submit-exam-btn">交卷並查看結果</button>
+                </div>
+                <div id="practice-nav" class="hidden">
+                    <button id="next-btn-practice">下一題</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results container -->
+        <div id="results-container" class="hidden">
+            <h2>測驗結果</h2>
+            <div id="results-summary"></div>
+            <ul id="results-list"></ul>
+            <button id="retry-btn" class="hidden">重做錯題</button>
+        </div>
+    </div>
+    
+    <button id="back-to-menu-btn" class="hidden">回到選單</button>
+
+    <script src="quiz-data.js"></script>
+    <script>
+        // DOM Elements
+        const menuContainer = document.getElementById('menu-container');
+        const practiceMenuContainer = document.getElementById('practice-menu-container');
+        const startMockExamBtn = document.getElementById('start-mock-exam-btn');
+        const quizContainer = document.getElementById('quiz-container');
+        const resultsContainer = document.getElementById('results-container');
+        const quizHeader = document.getElementById('quiz-header');
+        const questionProgress = document.getElementById('question-progress');
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const feedback = document.getElementById('feedback');
+        const practiceNav = document.getElementById('practice-nav');
+        const examNav = document.getElementById('exam-nav');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtnExam = document.getElementById('next-btn-exam');
+        const nextBtnPractice = document.getElementById('next-btn-practice');
+        const submitExamBtn = document.getElementById('submit-exam-btn');
+        const resultsSummary = document.getElementById('results-summary');
+        const resultsList = document.getElementById('results-list');
+        const retryBtn = document.getElementById('retry-btn');
+        const backToMenuBtn = document.getElementById('back-to-menu-btn');
+        
+        // State Variables
+        let currentMode = 'practice';
+        let currentQuestions = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let incorrectQuestions = [];
+        let userAnswers = {};
+
+        function cleanQuestionText(q) {
+            let cleaned = q.replace(/^\s*(\d+\.\s*)?\([A-Z]+\)\s*/, '').trim();
+            return cleaned.replace(/\s*\(正解:.*\)\s*$/, '').trim();
+        }
+
+        function getQuestionType(q) {
+            if (q.isExplanation) return 'explanation';
+            if (Array.isArray(q.a)) return '複選題';
+            if (typeof q.a === 'boolean') return '是非題';
+            return '單選題';
+        }
+
+        function showView(view) {
+            menuContainer.classList.add('hidden');
+            quizContainer.classList.add('hidden');
+            resultsContainer.classList.add('hidden');
+            backToMenuBtn.classList.add('hidden');
+
+            if (view === 'menu') {
+                menuContainer.classList.remove('hidden');
+            } else if (view === 'quiz') {
+                quizContainer.classList.remove('hidden');
+                backToMenuBtn.classList.remove('hidden');
+            } else if (view === 'results') {
+                resultsContainer.classList.remove('hidden');
+                backToMenuBtn.classList.remove('hidden');
+            }
+        }
+        
+        function startPracticeQuiz(config) {
+            currentMode = 'practice';
+            currentQuestionIndex = 0;
+            score = 0;
+            incorrectQuestions = [];
+            const { unit, type, isRetry, questions } = config;
+            currentQuestions = isRetry ? questions : quizData[unit][type];
+            quizHeader.textContent = isRetry ? '錯題重做' : `${unit} - ${type}`;
+            showView('quiz');
+            loadQuestion();
+        }
+
+        function startMockExam() {
+            currentMode = 'exam';
+            currentQuestionIndex = 0;
+            userAnswers = {};
+            const allQuestions = { '是非題': [], '單選題': [], '複選題': [] };
+            Object.values(quizData).forEach(unit => {
+                Object.entries(unit).forEach(([type, questions]) => {
+                    if (allQuestions[type]) allQuestions[type].push(...questions);
+                });
+            });
+            const shuffleAndPick = (arr, num) => arr.sort(() => 0.5 - Math.random()).slice(0, num);
+            
+            const tfQuestions = shuffleAndPick(allQuestions['是非題'], 10);
+            const scQuestions = shuffleAndPick(allQuestions['單選題'], 10);
+            const mcQuestions = shuffleAndPick(allQuestions['複選題'], 10);
+
+            currentQuestions = [];
+            if (tfQuestions.length > 0) {
+                currentQuestions.push({ isExplanation: true, text: `下面要開始進行"是非題"共 ${tfQuestions.length} 題` });
+                currentQuestions.push(...tfQuestions);
+            }
+            if (scQuestions.length > 0) {
+                currentQuestions.push({ isExplanation: true, text: `下面要開始進行"單選題"共 ${scQuestions.length} 題` });
+                currentQuestions.push(...scQuestions);
+            }
+            if (mcQuestions.length > 0) {
+                currentQuestions.push({ isExplanation: true, text: `下面要開始進行"複選題"共 ${mcQuestions.length} 題` });
+                currentQuestions.push(...mcQuestions);
+            }
+
+            quizHeader.textContent = '模擬測驗';
+            showView('quiz');
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            feedback.classList.add('hidden');
+            optionsContainer.innerHTML = '';
+            
+            const qData = currentQuestions[currentQuestionIndex];
+
+            // Handle explanation page
+            if (qData.isExplanation) {
+                questionProgress.classList.add('hidden'); // Hide progress on explanation page
+                questionText.innerHTML = `<div style="font-size: 1.5em; text-align: center; padding: 40px 0; line-height: 1.8;">${qData.text}</div>`;
+                optionsContainer.innerHTML = ''; // No options for explanation
+
+                // Modify navigation for explanation page
+                practiceNav.classList.add('hidden');
+                examNav.classList.remove('hidden');
+                
+                prevBtn.disabled = (currentQuestionIndex === 0);
+                nextBtnExam.disabled = false; // Always allow moving to the first question
+                nextBtnExam.textContent = '開始作答'; // More intuitive text
+                submitExamBtn.classList.add('hidden'); // Hide submit button on explanation page
+                nextBtnExam.classList.remove('hidden');
+
+                return; // Stop further processing for explanation page
+            }
+
+            // Restore default state if previous was explanation
+            questionProgress.classList.remove('hidden');
+            nextBtnExam.textContent = '下一題';
+
+            // Calculate real question number
+            const realQuestions = currentQuestions.filter(q => !q.isExplanation);
+            const realQuestionIndex = currentQuestions.slice(0, currentQuestionIndex).filter(q => !q.isExplanation).length;
+            questionProgress.textContent = `第 ${realQuestionIndex + 1} / ${realQuestions.length} 題`;
+            
+            const questionType = getQuestionType(qData);
+            
+            // 創建題型標籤
+            const typeTag = document.createElement('span');
+            typeTag.classList.add('question-type-tag');
+            typeTag.textContent = questionType;
+            if (questionType === '是非題') typeTag.classList.add('tf');
+            else if (questionType === '單選題') typeTag.classList.add('sc');
+            else if (questionType === '複選題') typeTag.classList.add('mc');
+
+            // 清空並組合題目顯示
+            questionText.innerHTML = '';
+            questionText.appendChild(typeTag);
+            questionText.append(cleanQuestionText(qData.q)); // append會將文字節點加到後面
+            
+            createOptions(qData, questionType);
+            updateNavigation();
+        }
+        
+        function createOptions(qData, questionType) {
+            const isMultiple = questionType === '複選題';
+            const currentExamAnswer = (currentMode === 'exam') ? userAnswers[currentQuestionIndex] : null;
+
+            const optionsSource = (questionType === '是非題') 
+                ? [{ text: 'O (是)', value: true }, { text: 'X (非)', value: false }]
+                : qData.o.map(text => {
+                    const match = text.match(/^\s*([A-Z])\.\s*|^\s*\(([A-Z])\)/);
+                    return { text, value: match ? (match[1] || match[2]) : '' };
+                });
+
+            optionsSource.forEach(opt => {
+                const isSelected = currentExamAnswer && (isMultiple ? currentExamAnswer.includes(opt.value) : currentExamAnswer === opt.value);
+                createOptionButton(opt.text, opt.value, isMultiple, isSelected);
+            });
+            
+            if (currentMode === 'practice' && isMultiple) {
+                const submitBtn = document.createElement('button');
+                submitBtn.id = 'submit-answer-btn';
+                submitBtn.textContent = '送出答案';
+                submitBtn.onclick = () => checkAnswerPractice(true);
+                optionsContainer.appendChild(submitBtn);
+            }
+        }
+
+        
+        
+
+        function createOptionButton(text, value, isMultiple, isSelected) {
+            const button = document.createElement('button');
+            button.className = 'option-btn';
+            if (isSelected) button.classList.add('selected');
+            button.innerHTML = text;
+
+            // ** 修正：不再使用 JSON.stringify，直接儲存值 **
+            button.dataset.value = value;
+            
+            button.onclick = () => {
+                if (currentMode === 'exam') {
+                    if (isMultiple) {
+                        button.classList.toggle('selected');
+                        const currentSelection = userAnswers[currentQuestionIndex] || [];
+                        // 複選題的 value 是字串，直接處理
+                        userAnswers[currentQuestionIndex] = button.classList.contains('selected') 
+                            ? [...currentSelection, value].sort() 
+                            : currentSelection.filter(v => v !== value);
+                    } else {
+                        Array.from(optionsContainer.children).forEach(btn => btn.classList.remove('selected'));
+                        button.classList.add('selected');
+                        userAnswers[currentQuestionIndex] = value;
+                    }
+                    nextBtnExam.disabled = false;
+                    submitExamBtn.disabled = false;
+                } else { // practice mode
+                    if (!isMultiple) checkAnswerPractice(false, value);
+                    else button.classList.toggle('selected');
+                }
+            };
+            optionsContainer.appendChild(button);
+        }
+
+
+        function checkAnswerPractice(isMultiple, selectedValue) {
+            let userAnswer = selectedValue;
+
+            if (isMultiple) {
+                // 從選中的按鈕直接讀取 dataset.value
+                userAnswer = Array.from(optionsContainer.querySelectorAll('.option-btn.selected'))
+                    .map(btn => btn.dataset.value)
+                    .sort();
+            }
+
+            const q = currentQuestions[currentQuestionIndex];
+            const correctAnswer = Array.isArray(q.a) ? q.a.sort() : q.a;
+            const isCorrect = JSON.stringify(userAnswer) === JSON.stringify(correctAnswer);
+            
+            feedback.classList.remove('hidden');
+            Array.from(optionsContainer.querySelectorAll('button')).forEach(btn => btn.disabled = true);
+            
+            Array.from(optionsContainer.querySelectorAll('.option-btn')).forEach(btn => {
+                // 直接讀取 dataset.value 字串
+                let btnValue = btn.dataset.value;
+                // 如果是布林字串，將其轉換回布林值以便比較
+                if (btnValue === 'true') btnValue = true;
+                if (btnValue === 'false') btnValue = false;
+                
+                
+                const isCorrectAnswerOption = Array.isArray(correctAnswer) 
+                    ? correctAnswer.includes(btnValue) 
+                    : btnValue === correctAnswer;
+                
+                if (isCorrectAnswerOption) {
+                    btn.classList.add('correct');
+                }
+
+                const wasSelectedByUser = Array.isArray(userAnswer)
+                    ? userAnswer.includes(btnValue)
+                    : btnValue === userAnswer;
+
+                if (wasSelectedByUser && !isCorrectAnswerOption) {
+                    btn.classList.add('incorrect');
+                }
+            });
+            
+            if (isCorrect) {
+                score++;
+                feedback.textContent = '答對了！';
+                feedback.className = 'feedback-correct';
+            } else {
+                incorrectQuestions.push(q);
+                let answerString = JSON.stringify(correctAnswer).replace(/[\[\]"]/g, '').replace(/,/g, ', ');
+                if (answerString == 'true') {
+                    answerString = 'O (是)';
+                }
+                if (answerString == 'false') {
+                    answerString = 'X (非)';
+                }
+                feedback.innerHTML = `答錯了！<br>正確答案是：${answerString}`;
+                feedback.className = 'feedback-incorrect';
+            }
+            nextBtnPractice.disabled = false;
+        }
+
+        function updateNavigation() {
+            practiceNav.classList.add('hidden');
+            examNav.classList.add('hidden');
+
+            if (currentMode === 'exam') {
+                examNav.classList.remove('hidden');
+                prevBtn.disabled = (currentQuestionIndex === 0);
+                
+                // *** 主要修改 1: 預設禁用下一題和交卷按鈕 ***
+                nextBtnExam.disabled = true;
+                submitExamBtn.disabled = true;
+
+                // *** 主要修改 2: 如果該題已作答，則啟用按鈕 ***
+                if (userAnswers[currentQuestionIndex] !== undefined) {
+                    nextBtnExam.disabled = false;
+                    submitExamBtn.disabled = false;
+                }
+                
+                nextBtnExam.classList.toggle('hidden', currentQuestionIndex === currentQuestions.length - 1);
+                submitExamBtn.classList.toggle('hidden', currentQuestionIndex !== currentQuestions.length - 1);
+            } else { // practice mode
+                practiceNav.classList.remove('hidden');
+                nextBtnPractice.disabled = true;
+            }
+        }
+        
+        function showPracticeResults() {
+            showView('results');
+            resultsList.innerHTML = '';
+            resultsSummary.innerHTML = `
+                作答完成！<br>總題數：${currentQuestions.length} 題<br>
+                答對：<span style="color: var(--correct-color);">${score}</span> 題 | 
+                答錯：<span style="color: var(--incorrect-color);">${incorrectQuestions.length}</span> 題`;
+            retryBtn.classList.toggle('hidden', incorrectQuestions.length === 0);
+        }
+
+        function showExamResults() {
+            if (!confirm("確定要交卷嗎？")) return;
+            let totalScore = 0;
+            const correctCounts = { '是非題': 0, '單選題': 0, '複選題': 0 };
+            const points = { '是非題': 2, '單選題': 3, '複選題': 5 };
+            resultsList.innerHTML = '';
+
+            const realQuestions = currentQuestions.filter(q => !q.isExplanation);
+
+            currentQuestions.forEach((q, index) => {
+                if (q.isExplanation) return;
+
+                const userAnswer = userAnswers[index];
+                const correctAnswer = q.a;
+                const questionType = getQuestionType(q);
+                
+                const isCorrect = Array.isArray(correctAnswer) 
+                    ? userAnswer && JSON.stringify(userAnswer.sort()) === JSON.stringify(correctAnswer.sort())
+                    : userAnswer === correctAnswer;
+                
+                const earnedPoints = isCorrect ? points[questionType] : 0;
+                if(isCorrect) correctCounts[questionType]++;
+                totalScore += earnedPoints;
+
+                const userAnswerStr = userAnswer !== undefined 
+                    ? (Array.isArray(userAnswer) ? userAnswer.join(', ') : (userAnswer === true ? 'O' : (userAnswer === false ? 'X' : userAnswer)))
+                    : '未作答';
+                const correctAnswerStr = Array.isArray(correctAnswer) 
+                    ? correctAnswer.join(', ')
+                    : (correctAnswer === true ? 'O' : (correctAnswer === false ? 'X' : correctAnswer));
+                
+                let optionsHTML = '<div style="margin-top: 8px; font-size: 0.9em; color: #555;">';
+                if (questionType !== '是非題' && q.o) {
+                    optionsHTML += q.o.join('<br>');
+                }
+                optionsHTML += '</div>';
+
+                const li = document.createElement('li');
+                if (!isCorrect) {
+                    li.classList.add('result-item-incorrect');
+                }
+
+                const realQuestionIndex = currentQuestions.slice(0, index).filter(item => !item.isExplanation).length;
+
+                li.innerHTML = `
+                    <div class="result-question">${realQuestionIndex + 1}. [${questionType}] ${cleanQuestionText(q.q)}</div>
+                    ${optionsHTML}
+                    <div class="result-answer" style="margin-top:10px;">您的答案：<span class="${isCorrect ? '' : 'user-answer-incorrect'}">${userAnswerStr}</span></div>
+                    <div class="result-answer">正確答案：<span class="correct-answer">${correctAnswerStr}</span></div>
+                    <div class="result-points">得分：${earnedPoints} / ${points[questionType]}</div>`;
+                resultsList.appendChild(li);
+            });
+            
+            const tfCount = realQuestions.filter(q => getQuestionType(q) === '是非題').length;
+            const scCount = realQuestions.filter(q => getQuestionType(q) === '單選題').length;
+            const mcCount = realQuestions.filter(q => getQuestionType(q) === '複選題').length;
+
+            resultsSummary.innerHTML = `
+                總分：${totalScore} / 100<br>
+                是非題：${correctCounts['是非題']}/${tfCount} | 
+                單選題：${correctCounts['單選題']}/${scCount} | 
+                複選題：${correctCounts['複選題']}/${mcCount}`;
+            showView('results');
+            retryBtn.classList.add('hidden');
+        }
+        
+        function goBackToMenu() {
+            if (currentMode === 'exam' && !quizContainer.classList.contains('hidden')) {
+                if (!confirm("模擬測驗尚未完成，確定要退出嗎？")) return;
+            }
+            showView('menu');
+        }
+
+        // --- EVENT LISTENERS ---
+        startMockExamBtn.addEventListener('click', startMockExam);
+        prevBtn.addEventListener('click', () => { if (currentQuestionIndex > 0) loadQuestion(--currentQuestionIndex); });
+        nextBtnExam.addEventListener('click', () => { if (currentQuestionIndex < currentQuestions.length - 1) loadQuestion(++currentQuestionIndex); });
+        nextBtnPractice.addEventListener('click', () => (currentQuestionIndex < currentQuestions.length - 1) ? loadQuestion(++currentQuestionIndex) : showPracticeResults());
+        submitExamBtn.addEventListener('click', showExamResults);
+        retryBtn.addEventListener('click', () => startPracticeQuiz({ isRetry: true, questions: incorrectQuestions }));
+        backToMenuBtn.addEventListener('click', goBackToMenu);
+        
+        // Initial Load
+        function initialize() {
+            document.addEventListener('DOMContentLoaded', () => {
+                const practiceMenuContainer = document.getElementById('practice-menu-container');
+                if (!practiceMenuContainer) {
+                    console.error('practice-menu-container not found!');
+                    return;
+                }
+                
+                Object.keys(quizData).forEach(unit => {
+                    const unitData = quizData[unit];
+                    if (unitData && Object.values(unitData).some(arr => arr && arr.length > 0)) {
+                        const unitDiv = document.createElement('div');
+                        unitDiv.className = 'unit';
+                        const unitTitle = document.createElement('h2');
+                        unitTitle.textContent = unit;
+                        unitDiv.appendChild(unitTitle);
+                        const buttonsDiv = document.createElement('div');
+                        buttonsDiv.className = 'quiz-type-buttons';
+                        Object.keys(unitData).forEach(type => {
+                            if (unitData[type] && unitData[type].length > 0) {
+                                const button = document.createElement('button');
+                                button.textContent = type;
+                                button.onclick = () => startPracticeQuiz({ unit, type });
+                                buttonsDiv.appendChild(button);
+                            }
+                        });
+                        unitDiv.appendChild(buttonsDiv);
+                        practiceMenuContainer.appendChild(unitDiv);
+                    }
+                });
+            });
+        }
+        
+        initialize();
+
+    </script>
+</body>
+</html>

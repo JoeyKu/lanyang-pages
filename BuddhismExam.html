@@ -233,6 +233,25 @@
         let incorrectQuestions = [];
         let userAnswers = {};
 
+        // Normalize quizData to support both nested (unit-based) and flat structures
+        let activeQuizData = {};
+        const isFlatQuizData = typeof quizData !== 'undefined' && quizData && (
+            Array.isArray(quizData['是非題']) || 
+            Array.isArray(quizData['單選題']) || 
+            Array.isArray(quizData['複選題'])
+        );
+        if (isFlatQuizData) {
+            activeQuizData = {
+                "全部題型": {
+                    "是非題": quizData["是非題"] || [],
+                    "單選題": quizData["單選題"] || [],
+                    "複選題": quizData["複選題"] || []
+                }
+            };
+        } else {
+            activeQuizData = (typeof quizData !== 'undefined') ? quizData : {};
+        }
+
         function cleanQuestionText(q) {
             let cleaned = q.replace(/^\s*(\d+\.\s*)?\([A-Z]+\)\s*/, '').trim();
             return cleaned.replace(/\s*\(正解:.*\)\s*$/, '').trim();
@@ -268,7 +287,7 @@
             score = 0;
             incorrectQuestions = [];
             const { unit, type, isRetry, questions } = config;
-            currentQuestions = isRetry ? questions : quizData[unit][type];
+            currentQuestions = isRetry ? questions : activeQuizData[unit][type];
             quizHeader.textContent = isRetry ? '錯題重做' : `${unit} - ${type}`;
             showView('quiz');
             loadQuestion();
@@ -279,7 +298,7 @@
             currentQuestionIndex = 0;
             userAnswers = {};
             const allQuestions = { '是非題': [], '單選題': [], '複選題': [] };
-            Object.values(quizData).forEach(unit => {
+            Object.values(activeQuizData).forEach(unit => {
                 Object.entries(unit).forEach(([type, questions]) => {
                     if (allQuestions[type]) allQuestions[type].push(...questions);
                 });
@@ -622,8 +641,8 @@
                     return;
                 }
                 
-                Object.keys(quizData).forEach(unit => {
-                    const unitData = quizData[unit];
+                Object.keys(activeQuizData).forEach(unit => {
+                    const unitData = activeQuizData[unit];
                     if (unitData && Object.values(unitData).some(arr => arr && arr.length > 0)) {
                         const unitDiv = document.createElement('div');
                         unitDiv.className = 'unit';

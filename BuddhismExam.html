@@ -232,6 +232,7 @@
         let score = 0;
         let incorrectQuestions = [];
         let userAnswers = {};
+        let autoAdvanceTimeout = null;
 
         // Normalize quizData to support both nested (unit-based) and flat structures
         let activeQuizData = {};
@@ -265,6 +266,10 @@
         }
 
         function showView(view) {
+            if (autoAdvanceTimeout) {
+                clearTimeout(autoAdvanceTimeout);
+                autoAdvanceTimeout = null;
+            }
             menuContainer.classList.add('hidden');
             quizContainer.classList.add('hidden');
             resultsContainer.classList.add('hidden');
@@ -329,6 +334,10 @@
         }
 
         function loadQuestion() {
+            if (autoAdvanceTimeout) {
+                clearTimeout(autoAdvanceTimeout);
+                autoAdvanceTimeout = null;
+            }
             feedback.classList.add('hidden');
             optionsContainer.innerHTML = '';
             
@@ -489,6 +498,11 @@
                 score++;
                 feedback.innerHTML = '答對了！';
                 feedback.className = 'feedback-correct';
+                // Automatically go to next question after 1.2s (or 3.5s if it has an explanation/解析)
+                const delay = q.desc ? 3500 : 1200;
+                autoAdvanceTimeout = setTimeout(() => {
+                    nextBtnPractice.click();
+                }, delay);
             } else {
                 incorrectQuestions.push(q);
                 let answerString = JSON.stringify(correctAnswer).replace(/[\[\]"]/g, '').replace(/,/g, ', ');
@@ -502,7 +516,7 @@
                 feedback.className = 'feedback-incorrect';
             }
 
-            if (getQuestionType(q) === '是非題' && q.a === false && q.desc) {
+            if (q.desc) {
                 feedback.innerHTML += `<div style="font-weight: normal; font-size: 0.9em; margin-top: 8px; color: var(--text-color); border-top: 1px dashed rgba(0,0,0,0.1); padding-top: 8px; text-align: left;">解析：${q.desc}</div>`;
             }
             nextBtnPractice.disabled = false;
@@ -589,7 +603,7 @@
                 const realQuestionIndex = currentQuestions.slice(0, index).filter(item => !item.isExplanation).length;
 
                 let descHTML = '';
-                if (questionType === '是非題' && q.a === false && q.desc) {
+                if (q.desc) {
                     descHTML = `<div class="result-answer" style="color: var(--text-color); font-size: 0.95em; margin-top: 8px; background-color: rgba(0,0,0,0.02); padding: 8px; border-radius: 4px; border-left: 3px solid var(--accent-color);"><strong>解析：</strong>${q.desc}</div>`;
                 }
 
@@ -665,7 +679,51 @@
                 });
             });
         }
-        
+
+        // Keyboard navigation and answer selection
+        document.addEventListener('keydown', (event) => {
+            // Only capture keys when quiz view is active
+            if (quizContainer.classList.contains('hidden')) return;
+            const qData = currentQuestions[currentQuestionIndex];
+            if (!qData || qData.isExplanation) return;
+
+            // Prevent shortcuts when typing in inputs/textareas
+            if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') return;
+
+            const key = event.key.toUpperCase();
+            let targetValue = null;
+            const qType = getQuestionType(qData);
+            if (qType === '是非題') {
+                if (key === 'O') targetValue = 'true';
+                if (key === 'X') targetValue = 'false';
+            } else {
+                // Dynamic match for single/multiple choice options (A, B, C, D, E, F, etc.)
+                if (/^[A-Z]$/.test(key)) {
+                    targetValue = key;
+                }
+            }
+
+            if (targetValue !== null) {
+                const button = Array.from(optionsContainer.querySelectorAll('.option-btn')).find(btn => btn.dataset.value === targetValue);
+                if (button && !button.disabled) {
+                    event.preventDefault();
+                    button.click();
+                }
+            } else if (event.key === 'Enter') {
+                const submitAnswerBtn = document.getElementById('submit-answer-btn');
+                if (currentMode === 'practice' && submitAnswerBtn && !submitAnswerBtn.disabled) {
+                    event.preventDefault();
+                    submitAnswerBtn.click();
+                } else if (currentMode === 'practice' && !practiceNav.classList.contains('hidden') && !nextBtnPractice.disabled) {
+                    event.preventDefault();
+                    nextBtnPractice.click();
+                } else if (currentMode === 'exam' && !examNav.classList.contains('hidden') && !nextBtnExam.disabled) {
+                    event.preventDefault();
+                    nextBtnExam.click();
+                }
+            }
+        });
+
         initialize();
 
     </script>

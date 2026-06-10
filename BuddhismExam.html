@@ -468,7 +468,7 @@
             
             if (isCorrect) {
                 score++;
-                feedback.textContent = '答對了！';
+                feedback.innerHTML = '答對了！';
                 feedback.className = 'feedback-correct';
             } else {
                 incorrectQuestions.push(q);
@@ -481,6 +481,10 @@
                 }
                 feedback.innerHTML = `答錯了！<br>正確答案是：${answerString}`;
                 feedback.className = 'feedback-incorrect';
+            }
+
+            if (getQuestionType(q) === '是非題' && q.a === false && q.desc) {
+                feedback.innerHTML += `<div style="font-weight: normal; font-size: 0.9em; margin-top: 8px; color: var(--text-color); border-top: 1px dashed rgba(0,0,0,0.1); padding-top: 8px; text-align: left;">解析：${q.desc}</div>`;
             }
             nextBtnPractice.disabled = false;
         }
@@ -565,11 +569,17 @@
 
                 const realQuestionIndex = currentQuestions.slice(0, index).filter(item => !item.isExplanation).length;
 
+                let descHTML = '';
+                if (questionType === '是非題' && q.a === false && q.desc) {
+                    descHTML = `<div class="result-answer" style="color: var(--text-color); font-size: 0.95em; margin-top: 8px; background-color: rgba(0,0,0,0.02); padding: 8px; border-radius: 4px; border-left: 3px solid var(--accent-color);"><strong>解析：</strong>${q.desc}</div>`;
+                }
+
                 li.innerHTML = `
                     <div class="result-question">${realQuestionIndex + 1}. [${questionType}] ${cleanQuestionText(q.q)}</div>
                     ${optionsHTML}
                     <div class="result-answer" style="margin-top:10px;">您的答案：<span class="${isCorrect ? '' : 'user-answer-incorrect'}">${userAnswerStr}</span></div>
                     <div class="result-answer">正確答案：<span class="correct-answer">${correctAnswerStr}</span></div>
+                    ${descHTML}
                     <div class="result-points">得分：${earnedPoints} / ${points[questionType]}</div>`;
                 resultsList.appendChild(li);
             });

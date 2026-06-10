@@ -18,6 +18,7 @@
             --type-sc-bg: #2ecc71;  /* 單選題: 綠色 */
             --type-mc-bg: #f39c12;  /* 複選題: 橘色 */
             --font-family: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+            --font-scale: 1.0;
         }
         body {
             font-family: var(--font-family);
@@ -30,8 +31,10 @@
             align-items: flex-start;
             min-height: 100vh;
             -webkit-tap-highlight-color: transparent;
+            font-size: calc(16px * var(--font-scale));
         }
         .container {
+            position: relative;
             width: 100%;
             max-width: 800px;
             background-color: var(--secondary-bg);
@@ -40,6 +43,49 @@
             padding: 20px 40px;
             box-sizing: border-box;
             margin: 20px 0;
+        }
+        /* 字體放大縮小控制項 */
+        .font-size-controls {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            gap: 5px;
+            background-color: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(168, 122, 79, 0.2);
+            padding: 4px;
+            border-radius: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            z-index: 10;
+        }
+        .font-size-btn {
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s, color 0.2s;
+            font-size: 0.85rem;
+        }
+        .font-size-btn:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        @media (max-width: 600px) {
+            .font-size-controls {
+                position: relative;
+                top: auto;
+                right: auto;
+                margin: -5px auto 15px auto;
+                width: fit-content;
+            }
         }
         h1, h2 {
             color: var(--primary-color);
@@ -161,6 +207,12 @@
 </head>
 <body>
     <div class="container" id="main-container">
+        <!-- Font size controls -->
+        <div class="font-size-controls">
+            <button class="font-size-btn" id="font-dec-btn" title="縮小字體">A-</button>
+            <button class="font-size-btn" id="font-reset-btn" title="重設字體">A</button>
+            <button class="font-size-btn" id="font-inc-btn" title="放大字體">A+</button>
+        </div>
         <!-- Menu container -->
         <div id="menu-container">
              <h1>國際佛光會 2026 年全球佛學會考題庫</h1>
@@ -723,6 +775,32 @@
                 }
             }
         });
+
+        // Font Size Scaling
+        let currentFontScale = parseFloat(localStorage.getItem('buddha-exam-font-scale')) || 1.0;
+        
+        function applyFontScale() {
+            document.documentElement.style.setProperty('--font-scale', currentFontScale);
+        }
+        
+        function changeFontSize(delta) {
+            currentFontScale = Math.max(0.8, Math.min(2.0, currentFontScale + delta));
+            localStorage.setItem('buddha-exam-font-scale', currentFontScale);
+            applyFontScale();
+        }
+        
+        function resetFontSize() {
+            currentFontScale = 1.0;
+            localStorage.setItem('buddha-exam-font-scale', currentFontScale);
+            applyFontScale();
+        }
+
+        // Initialize font scale
+        applyFontScale();
+
+        document.getElementById('font-dec-btn').addEventListener('click', () => changeFontSize(-0.1));
+        document.getElementById('font-reset-btn').addEventListener('click', resetFontSize);
+        document.getElementById('font-inc-btn').addEventListener('click', () => changeFontSize(0.1));
 
         initialize();
 

@@ -737,12 +737,41 @@
             // Only capture keys when quiz view is active
             if (quizContainer.classList.contains('hidden')) return;
             const qData = currentQuestions[currentQuestionIndex];
-            if (!qData || qData.isExplanation) return;
+            if (!qData) return;
 
             // Prevent shortcuts when typing in inputs/textareas
             if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') return;
 
             const key = event.key.toUpperCase();
+
+            // Next / Previous hotkeys (N / P)
+            if (key === 'N') {
+                if (currentMode === 'practice') {
+                    if (!nextBtnPractice.disabled && !practiceNav.classList.contains('hidden')) {
+                        event.preventDefault();
+                        nextBtnPractice.click();
+                        return;
+                    }
+                } else if (currentMode === 'exam') {
+                    if (!nextBtnExam.disabled && !nextBtnExam.classList.contains('hidden') && !examNav.classList.contains('hidden')) {
+                        event.preventDefault();
+                        nextBtnExam.click();
+                        return;
+                    }
+                }
+            } else if (key === 'P') {
+                if (currentMode === 'exam') {
+                    if (!prevBtn.disabled && !examNav.classList.contains('hidden')) {
+                        event.preventDefault();
+                        prevBtn.click();
+                        return;
+                    }
+                }
+            }
+
+            // Skip option selection if current view is an explanation page
+            if (qData.isExplanation) return;
+
             let targetValue = null;
             const qType = getQuestionType(qData);
             if (qType === '是非題') {

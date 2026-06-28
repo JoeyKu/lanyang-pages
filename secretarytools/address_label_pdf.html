@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>地址標籤 PDF 產生器</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700&family=Noto+Sans+TC:wght@300;400;500&display=swap');
+
+    :root {
+      --primary: #a87a4f;
+      --primary-mid: #d4a373;
+      --primary-pale: #e8dcc4;
+      --bg-light: #fdfaf3;
+      --bg-white: #ffffff;
+      --text-dark: #3d2c1b;
+      --text-secondary: #6b4f35;
+      --border: #d4b896;
+      --red: #c0392b;
+      --green: #27ae60;
+      --shadow: rgba(168, 122, 79, .14);
+      --radius: 16px;
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      background: var(--bg-light);
+      color: var(--text-dark);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 40px 20px;
+    }
+
+    main { width: 100%; max-width: 800px; }
+
+    .header {
+      margin-bottom: 40px;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-family: 'Noto Serif TC', serif;
+      font-size: 42px;
+      color: var(--primary);
+      margin-bottom: 8px;
+    }
+
+    .header p {
+      color: var(--text-secondary);
+      font-size: 18px;
+    }
+
+    .tool-card {
+      background: var(--bg-white);
+      border-radius: var(--radius);
+      padding: 40px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      border: 1px solid rgba(168,122,79,0.1);
+      margin-bottom: 40px;
+    }
+
+    .section-label {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+      letter-spacing: 0.5px;
+    }
+
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 14px;
+      background: #fff;
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all .2s;
+      position: relative;
+      margin-bottom: 24px;
+    }
+
+    .drop-zone:hover, .drop-zone.over {
+      border-color: var(--primary);
+      background: var(--bg-light);
+    }
+
+    .drop-zone input[type=file] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .dz-icon { font-size: 48px; margin-bottom: 12px; }
+
+    .dz-label {
+      font-size: 18px;
+      color: var(--primary);
+      font-weight: 600;
+      letter-spacing: .5px;
+    }
+
+    .dz-hint { font-size: 14px; color: #888; margin-top: 6px; }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-light);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 14px;
+      color: var(--primary);
+      font-weight: 500;
+      margin-bottom: 16px;
+    }
+
+    .preview-table-wrap {
+      max-height: 280px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 24px;
+    }
+
+    .preview-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    .preview-table th {
+      background: var(--primary-pale);
+      color: var(--text-dark);
+      font-weight: 600;
+      padding: 10px 16px;
+      text-align: left;
+      position: sticky;
+      top: 0;
+    }
+
+    .preview-table td {
+      padding: 8px 16px;
+      border-top: 1px solid #f0e8d8;
+      color: var(--text-dark);
+    }
+
+    .preview-table tr:nth-child(even) td { background: #fdf6ec; }
+
+    .preview-table tr:hover td { background: var(--primary-pale); }
+
+    .count-badge {
+      display: inline-block;
+      background: var(--primary);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 20px;
+      padding: 2px 12px;
+      margin-left: 10px;
+    }
+
+    #status {
+      font-size: 14px;
+      color: var(--red);
+      min-height: 24px;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+
+    #status.ok { color: var(--green); }
+
+    .btn-process {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 12px;
+      background: var(--primary);
+      color: #fff;
+      font-size: 18px;
+      font-family: 'Noto Sans TC', sans-serif;
+      font-weight: 600;
+      letter-spacing: 1px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px var(--shadow);
+      transition: var(--transition);
+    }
+
+    .btn-process:hover:not(:disabled) {
+      background: var(--primary-mid);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px var(--shadow);
+    }
+
+    .btn-process:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .info-box {
+      background: var(--bg-light);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 20px;
+      margin-bottom: 24px;
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.8;
+    }
+
+    .info-box strong { color: var(--primary); }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--primary);
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      transition: var(--transition);
+    }
+    .back-btn:hover {
+      color: var(--primary-mid);
+      transform: translateX(-5px);
+    }
+
+    @media (max-width: 640px) {
+      .header h1 { font-size: 28px; }
+      .tool-card { padding: 24px; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <a href="index.html" class="back-btn">
+    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+    </svg>
+    返回工具箱
+  </a>
+  <div class="header">
+    <h1>📦 地址標籤 PDF 產生器</h1>
+    <p>上傳 Excel，自動排版 16 格標籤，可直接裁剪貼寄</p>
+  </div>
+
+  <div class="tool-card">
+    <div class="info-box">
+      <strong>使用說明：</strong><br>
+      • Excel 欄位須包含 <strong>「郵遞區號」</strong>、<strong>「姓名」</strong>、<strong>「地址」</strong>（第一行為標題）<br>
+      • 每張 A4 排版 <strong>2 欄 × 8 列 = 16 個標籤</strong>，四邊無留白<br>
+      • 超過 16 筆會自動分頁，每頁 16 個
+    </div>
+
+    <div class="section-label">① 選擇 Excel 檔案</div>
+    <div class="drop-zone" id="drop-zone">
+      <input type="file" accept=".xlsx,.xls,.csv" id="file-input" onchange="handleFile(this.files[0])">
+      <div class="dz-icon">📊</div>
+      <div class="dz-label">點擊選擇或拖曳 Excel 檔案</div>
+      <div class="dz-hint">支援 .xlsx、.xls、.csv 格式</div>
+    </div>
+
+    <div id="chip-area" style="display:none">
+      <div class="chip">
+        <span>📄</span>
+        <span id="file-name-label"></span>
+        <span id="row-count-badge" class="count-badge"></span>
+      </div>
+    </div>
+
+    <div id="preview-area" style="display:none">
+      <div class="section-label">② 資料預覽</div>
+      <div class="preview-table-wrap">
+        <table class="preview-table" id="preview-table">
+          <thead><tr><th>#</th><th>郵遞區號</th><th>姓名</th><th>地址</th></tr></thead>
+          <tbody id="preview-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="status"></div>
+
+    <button class="btn-process" id="btn-process" disabled onclick="generatePDF()">
+      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+      </svg>
+      產生並下載 PDF
+    </button>
+  </div>
+</main>
+
+<script>
+  let records = [];
+
+  const dz = document.getElementById('drop-zone');
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault();
+    dz.classList.remove('over');
+    const f = e.dataTransfer.files[0];
+    if (f) handleFile(f);
+  });
+
+  function setStatus(msg, isOk = false) {
+    const el = document.getElementById('status');
+    el.textContent = msg;
+    el.className = isOk ? 'ok' : '';
+  }
+
+  function handleFile(file) {
+    if (!file) return;
+    setStatus('');
+    records = [];
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+        if (rows.length === 0) {
+          setStatus('❌ Excel 內容為空，請確認資料。');
+          return;
+        }
+
+        // Find name, address, postal code columns (flexible matching)
+        const keys = Object.keys(rows[0]);
+        const nameKey = keys.find(k => k.includes('姓名') || k.toLowerCase() === 'name');
+        const addrKey = keys.find(k => k.includes('地址') || k.toLowerCase().includes('address'));
+        const zipKey  = keys.find(k => k.includes('郵遞區號') || k.includes('郵編') || k.toLowerCase().includes('zip') || k.toLowerCase().includes('postal'));
+
+        if (!nameKey || !addrKey) {
+          setStatus(`❌ 找不到「姓名」或「地址」欄位。目前欄位：${keys.join('、')}`);
+          return;
+        }
+
+        records = rows.map(r => ({
+          name:    String(r[nameKey] || '').trim(),
+          address: String(r[addrKey] || '').trim(),
+          zip:     zipKey ? String(r[zipKey] || '').trim() : ''
+        })).filter(r => r.name || r.address);
+
+        if (records.length === 0) {
+          setStatus('❌ 資料為空，請確認欄位內容。');
+          return;
+        }
+
+        // Update UI
+        document.getElementById('file-name-label').textContent = file.name;
+        document.getElementById('row-count-badge').textContent = `${records.length} 筆`;
+        document.getElementById('chip-area').style.display = '';
+        document.getElementById('preview-area').style.display = '';
+
+        const tbody = document.getElementById('preview-body');
+        tbody.innerHTML = '';
+        records.forEach((r, i) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${i + 1}</td><td>${escHtml(r.zip)}</td><td>${escHtml(r.name)}</td><td>${escHtml(r.address)}</td>`;
+          tbody.appendChild(tr);
+        });
+
+        document.getElementById('btn-process').disabled = false;
+        const pages = Math.ceil(records.length / 16); // 2x8 = 16 per page
+        setStatus(`✅ 成功讀取 ${records.length} 筆，將產生 ${pages} 頁 PDF`, true);
+
+      } catch (err) {
+        setStatus('❌ 檔案讀取失敗：' + (err.message || err));
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    document.getElementById('file-input').value = '';
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ─── jsPDF helpers ────────────────────────────────────────────────
+  // Load font that supports CJK via base64 embedded subset approach.
+  // We'll use jsPDF's built-in text rendering with UTF-8 and rely on
+  // the browser's canvas approach via html2canvas alternative:
+  // Actually we'll draw using jsPDF directly with a Unicode-capable font.
+  // Since jsPDF default font doesn't support CJK, we render each label
+  // onto a hidden canvas using HTML/CSS, then embed as image into PDF.
+
+  async function generatePDF() {
+    if (records.length === 0) return;
+    const btn = document.getElementById('btn-process');
+    btn.disabled = true;
+    setStatus('產生中，請稍候…');
+
+    try {
+      const { jsPDF } = window.jspdf;
+
+      // A4: 595.28 x 841.89 pt — 零留白，2 欄 x 8 列 = 16 張/頁
+      const pageW = 595.28;
+      const pageH = 841.89;
+      const cols = 2;
+      const rows = 8;
+      const perPage = 16;
+
+      const cellW = pageW / cols;   // 297.64 pt ≈ 10.5 cm
+      const cellH = pageH / rows;   // 105.24 pt ≈ 3.71 cm
+
+      // Canvas scale (2x for crisp rendering)
+      const scale = 2;
+      const cellPxW = Math.round(cellW * scale);
+      const cellPxH = Math.round(cellH * scale);
+
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+
+      for (let i = 0; i < records.length; i++) {
+        if (i > 0 && i % perPage === 0) doc.addPage();
+
+        const idx = i % perPage;
+        const col = idx % cols;
+        const row = Math.floor(idx / cols);
+
+        const cellX = col * cellW;
+        const cellY = row * cellH;
+
+        // Draw label onto canvas
+        const canvas = document.createElement('canvas');
+        canvas.width = cellPxW;
+        canvas.height = cellPxH;
+        const ctx = canvas.getContext('2d');
+
+        // Background
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, cellPxW, cellPxH);
+
+        const pad = 14 * scale;
+        const contentW = cellPxW - pad * 2;
+        const fontFamily = '"Noto Sans TC", "Microsoft JhengHei", "PingFang TC", sans-serif';
+        ctx.textBaseline = 'top';
+        ctx.fillStyle = '#1a1a1a';
+
+        // ── 郵遞區號：左上角小字 ──
+        const zipFontSize = 11 * scale;
+        ctx.font = `400 ${zipFontSize}px ${fontFamily}`;
+        ctx.fillText(records[i].zip || '', pad, pad);
+
+        // ── 地址：大字，郵遞區號下方 ──
+        const addrFontSize = 15 * scale;
+        ctx.font = `400 ${addrFontSize}px ${fontFamily}`;
+        const addrLines = wrapText(ctx, records[i].address, contentW);
+        const addrLineH = addrFontSize * 1.55;
+        let addrY = pad + zipFontSize * 1.6;
+        for (const line of addrLines) {
+          ctx.fillText(line, pad, addrY);
+          addrY += addrLineH;
+        }
+
+        // ── 姓名　君啟：地址下方，稍小，左對齊 ──
+        const nameFontSize = 13 * scale;
+        ctx.font = `400 ${nameFontSize}px ${fontFamily}`;
+        const nameY = addrY + 6 * scale;
+        // Insert wide space between name and 君啟, like the photo
+        ctx.fillText((records[i].name || '') + '\u3000君啟', pad, nameY);
+
+        // Convert canvas to image and place in PDF (exact cell position, no margin)
+        const imgData = canvas.toDataURL('image/png');
+        doc.addImage(imgData, 'PNG', cellX, cellY, cellW, cellH);
+      }
+
+      // Draw cut guides over all pages
+      const totalPgs = doc.getNumberOfPages();
+      for (let p = 1; p <= totalPgs; p++) {
+        doc.setPage(p);
+        doc.setDrawColor(160, 160, 160);
+        doc.setLineDashPattern([3, 3], 0);
+        doc.setLineWidth(0.4);
+
+        // Vertical centre line
+        doc.line(pageW / 2, 0, pageW / 2, pageH);
+
+        // Horizontal lines between rows
+        for (let r = 1; r < rows; r++) {
+          const gy = r * cellH;
+          doc.line(0, gy, pageW, gy);
+        }
+
+        doc.setLineDashPattern([], 0);
+      }
+
+      doc.save('地址標籤.pdf');
+      setStatus(`✅ 完成！已下載 PDF（共 ${totalPgs} 頁，${records.length} 個標籤）`, true);
+
+    } catch (err) {
+      console.error(err);
+      setStatus('❌ 發生錯誤：' + (err.message || err));
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // Wrap text to fit within maxWidth pixels
+  function wrapText(ctx, text, maxWidth) {
+    if (!text) return [''];
+    const lines = [];
+    // Split by existing newlines first
+    const paragraphs = text.split(/[\n\r]+/);
+    for (const para of paragraphs) {
+      if (ctx.measureText(para).width <= maxWidth) {
+        lines.push(para);
+        continue;
+      }
+      // Character-level wrapping for CJK
+      let current = '';
+      for (const ch of para) {
+        const test = current + ch;
+        if (ctx.measureText(test).width > maxWidth && current.length > 0) {
+          lines.push(current);
+          current = ch;
+        } else {
+          current = test;
+        }
+      }
+      if (current) lines.push(current);
+    }
+    return lines.length > 0 ? lines : [''];
+  }
+</script>
+</body>
+</html>

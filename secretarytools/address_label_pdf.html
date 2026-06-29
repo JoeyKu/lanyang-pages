@@ -396,12 +396,92 @@
   }
 
   // ─── jsPDF helpers ────────────────────────────────────────────────
-  // Load font that supports CJK via base64 embedded subset approach.
-  // We'll use jsPDF's built-in text rendering with UTF-8 and rely on
-  // the browser's canvas approach via html2canvas alternative:
-  // Actually we'll draw using jsPDF directly with a Unicode-capable font.
-  // Since jsPDF default font doesn't support CJK, we render each label
-  // onto a hidden canvas using HTML/CSS, then embed as image into PDF.
+  const CACHE_NAME = 'address-label-font-cache-v1';
+  const FONT_URL = 'https://cdn.jsdelivr.net/npm/@electron-fonts/noto-sans-tc/fonts/NotoSansTC-Regular.ttf';
+  let cachedFontBase64 = null;
+
+  async function getFontBase64() {
+    if ('caches' in window) {
+      try {
+        const cache = await caches.open(CACHE_NAME);
+        let response = await cache.match(FONT_URL);
+        if (!response) {
+          console.log('Downloading font and caching...');
+          await cache.add(FONT_URL);
+          response = await cache.match(FONT_URL);
+        }
+        if (response) {
+          const buffer = await response.arrayBuffer();
+          return arrayBufferToBase64(buffer);
+        }
+      } catch (e) {
+        console.warn('Cache Storage error, falling back to fetch:', e);
+      }
+    }
+    
+    // Fallback: direct fetch
+    console.log('Direct fetching font...');
+    const response = await fetch(FONT_URL);
+    const buffer = await response.arrayBuffer();
+    return arrayBufferToBase64(buffer);
+  }
+
+  function arrayBufferToBase64(buffer) {
+    const binary = new Uint8Array(buffer);
+    let base64String = '';
+    const chunkSize = 0xffff;
+    for (let i = 0; i < binary.length; i += chunkSize) {
+      base64String += String.fromCharCode.apply(null, binary.subarray(i, i + chunkSize));
+    }
+    return btoa(base64String);
+  }
+
+  // Pre-load font in background
+  async function preloadFont() {
+    try {
+      cachedFontBase64 = await getFontBase64();
+      console.log('Font preloaded successfully.');
+    } catch (err) {
+      console.warn('Failed to preload font in background:', err);
+    }
+  }
+
+  window.addEventListener('DOMContentLoaded', preloadFont);
+
+  // Check if all characters in the text are supported by the standard Noto Sans TC font
+  function isTextSupportedByFont(doc, fontName, text) {
+    if (!text) return true;
+    let fontMetadata = null;
+    try {
+      const font = doc.internal.getFont(fontName, 'normal');
+      if (font && font.metadata && font.metadata.cmap && font.metadata.cmap.unicode && font.metadata.cmap.unicode.codeMap) {
+        fontMetadata = font.metadata;
+      }
+    } catch (e) {
+      console.warn('Could not read font metadata:', e);
+    }
+
+    for (let i = 0; i < text.length; i++) {
+      const code = text.codePointAt(i);
+      // If code point is surrogate pair (occupying 2 indices in length), skip trailing surrogate
+      if (code > 0xffff) {
+        i++;
+      }
+      if (fontMetadata) {
+        const glyphId = fontMetadata.cmap.unicode.codeMap[code];
+        if (glyphId === undefined) {
+          // Glyph is not supported by the font!
+          return false;
+        }
+      } else {
+        // Fallback Unicode range check if metadata is unavailable
+        if (code > 0xffff || (code >= 0x3400 && code <= 0x4dbf)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
 
   async function generatePDF() {
     if (records.length === 0) return;
@@ -411,6 +491,24 @@
 
     try {
       const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+
+      // Try loading custom CJK font to make PDF searchable
+      let fontLoaded = false;
+      try {
+        if (!cachedFontBase64) {
+          setStatus('載入字型檔中，第一次載入可能需要數秒，請稍候…');
+          cachedFontBase64 = await getFontBase64();
+        }
+        if (cachedFontBase64) {
+          doc.addFileToVFS('NotoSansTC.ttf', cachedFontBase64);
+          doc.addFont('NotoSansTC.ttf', 'NotoSansTC', 'normal');
+          doc.setFont('NotoSansTC');
+          fontLoaded = true;
+        }
+      } catch (fontErr) {
+        console.warn('Font loading failed, falling back to image mode:', fontErr);
+      }
 
       // A4: 595.28 x 841.89 pt — 零留白，2 欄 x 8 列 = 16 張/頁
       const pageW = 595.28;
@@ -422,13 +520,6 @@
       const cellW = pageW / cols;   // 297.64 pt ≈ 10.5 cm
       const cellH = pageH / rows;   // 105.24 pt ≈ 3.71 cm
 
-      // Canvas scale (2x for crisp rendering)
-      const scale = 2;
-      const cellPxW = Math.round(cellW * scale);
-      const cellPxH = Math.round(cellH * scale);
-
-      const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
-
       for (let i = 0; i < records.length; i++) {
         if (i > 0 && i % perPage === 0) doc.addPage();
 
@@ -439,49 +530,115 @@
         const cellX = col * cellW;
         const cellY = row * cellH;
 
-        // Draw label onto canvas
-        const canvas = document.createElement('canvas');
-        canvas.width = cellPxW;
-        canvas.height = cellPxH;
-        const ctx = canvas.getContext('2d');
+        const record = records[i];
+        const textToVerify = (record.zip || '') + (record.address || '') + (record.name || '');
+        const useVectorMode = fontLoaded && isTextSupportedByFont(doc, 'NotoSansTC', textToVerify);
 
-        // Background
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, cellPxW, cellPxH);
+        if (useVectorMode) {
+          // --- Searchable Vector Mode ---
+          const pad = 14;
+          const contentW = cellW - pad * 2;
 
-        const pad = 14 * scale;
-        const contentW = cellPxW - pad * 2;
-        const fontFamily = '"Noto Sans TC", "Microsoft JhengHei", "PingFang TC", sans-serif';
-        ctx.textBaseline = 'top';
-        ctx.fillStyle = '#1a1a1a';
+          // ── 郵遞區號：左上角小字 ──
+          doc.setFontSize(11);
+          doc.setTextColor(26, 26, 26); // #1a1a1a
+          doc.text(record.zip || '', cellX + pad, cellY + pad, { baseline: 'top' });
 
-        // ── 郵遞區號：左上角小字 ──
-        const zipFontSize = 11 * scale;
-        ctx.font = `400 ${zipFontSize}px ${fontFamily}`;
-        ctx.fillText(records[i].zip || '', pad, pad);
+          // ── 地址：大字，郵遞區號下方 ──
+          doc.setFontSize(15);
+          const addrX = cellX + pad;
+          const addrY = cellY + pad + 11 * 1.6;
 
-        // ── 地址：大字，郵遞區號下方 ──
-        const addrFontSize = 15 * scale;
-        ctx.font = `400 ${addrFontSize}px ${fontFamily}`;
-        const addrLines = wrapText(ctx, records[i].address, contentW);
-        const addrLineH = addrFontSize * 1.55;
-        let addrY = pad + zipFontSize * 1.6;
-        for (const line of addrLines) {
-          ctx.fillText(line, pad, addrY);
-          addrY += addrLineH;
+          const addrLines = doc.splitTextToSize(record.address, contentW);
+          let currentY = addrY;
+          const addrLineH = 15 * 1.55;
+          for (const line of addrLines) {
+            doc.text(line, addrX, currentY, { baseline: 'top' });
+            currentY += addrLineH;
+          }
+
+          // ── 姓名 君啟：地址下方，稍小，左對齊 ──
+          doc.setFontSize(13);
+          const nameY = currentY + 6;
+          doc.text((record.name || '') + '\u3000君啟', cellX + pad, nameY, { baseline: 'top' });
+
+        } else {
+          // --- Hybrid Searchable Image Mode (Renders image for CJK correctness, writes text behind it for searchability) ---
+
+          // 1. Draw the text first (behind the image) if font is loaded
+          if (fontLoaded) {
+            const pad = 14;
+            const contentW = cellW - pad * 2;
+
+            // ── 郵遞區號：左上角小字 ──
+            doc.setFontSize(11);
+            doc.setTextColor(26, 26, 26); // #1a1a1a
+            doc.text(record.zip || '', cellX + pad, cellY + pad, { baseline: 'top' });
+
+            // ── 地址：大字，郵遞區號下方 ──
+            doc.setFontSize(15);
+            const addrX = cellX + pad;
+            const addrY = cellY + pad + 11 * 1.6;
+
+            const addrLines = doc.splitTextToSize(record.address, contentW);
+            let currentY = addrY;
+            const addrLineH = 15 * 1.55;
+            for (const line of addrLines) {
+              doc.text(line, addrX, currentY, { baseline: 'top' });
+              currentY += addrLineH;
+            }
+
+            // ── 姓名 君啟 ──
+            doc.setFontSize(13);
+            const nameY = currentY + 6;
+            doc.text((record.name || '') + '\u3000君啟', cellX + pad, nameY, { baseline: 'top' });
+          }
+
+          // 2. Draw the canvas-generated JPEG image on top
+          const scale = 2;
+          const cellPxW = Math.round(cellW * scale);
+          const cellPxH = Math.round(cellH * scale);
+
+          const canvas = document.createElement('canvas');
+          canvas.width = cellPxW;
+          canvas.height = cellPxH;
+          const ctx = canvas.getContext('2d');
+
+          // Background (solid white to cover the text drawn behind it)
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, cellPxW, cellPxH);
+
+          const pad = 14 * scale;
+          const contentW = cellPxW - pad * 2;
+          const fontFamily = '"Noto Sans TC", "Microsoft JhengHei", "PingFang TC", sans-serif';
+          ctx.textBaseline = 'top';
+          ctx.fillStyle = '#1a1a1a';
+
+          // ── 郵遞區號 ──
+          const zipFontSize = 11 * scale;
+          ctx.font = `400 ${zipFontSize}px ${fontFamily}`;
+          ctx.fillText(record.zip || '', pad, pad);
+
+          // ── 地址 ──
+          const addrFontSize = 15 * scale;
+          ctx.font = `400 ${addrFontSize}px ${fontFamily}`;
+          const addrLines = wrapText(ctx, record.address, contentW);
+          const addrLineH = addrFontSize * 1.55;
+          let addrY = pad + zipFontSize * 1.6;
+          for (const line of addrLines) {
+            ctx.fillText(line, pad, addrY);
+            addrY += addrLineH;
+          }
+
+          // ── 姓名 ──
+          const nameFontSize = 13 * scale;
+          ctx.font = `400 ${nameFontSize}px ${fontFamily}`;
+          const nameY = addrY + 6 * scale;
+          ctx.fillText((record.name || '') + '\u3000君啟', pad, nameY);
+
+          const imgData = canvas.toDataURL('image/jpeg', 0.8);
+          doc.addImage(imgData, 'JPEG', cellX, cellY, cellW, cellH, undefined, 'FAST');
         }
-
-        // ── 姓名　君啟：地址下方，稍小，左對齊 ──
-        const nameFontSize = 13 * scale;
-        ctx.font = `400 ${nameFontSize}px ${fontFamily}`;
-        const nameY = addrY + 6 * scale;
-        // Insert wide space between name and 君啟, like the photo
-        ctx.fillText((records[i].name || '') + '\u3000君啟', pad, nameY);
-
-        // Convert canvas to image and place in PDF (exact cell position, no margin)
-        // Using JPEG with 0.8 quality instead of PNG to avoid raw RGBA bloat, reducing size by ~98%
-        const imgData = canvas.toDataURL('image/jpeg', 0.8);
-        doc.addImage(imgData, 'JPEG', cellX, cellY, cellW, cellH, undefined, 'FAST');
       }
 
       // Draw cut guides over all pages
@@ -505,7 +662,7 @@
       }
 
       doc.save('地址標籤.pdf');
-      setStatus(`✅ 完成！已下載 PDF（共 ${totalPgs} 頁，${records.length} 個標籤）`, true);
+      setStatus(`✅ 完成！已下載 PDF（共 ${totalPgs} 頁，${records.length} 個標籤）${fontLoaded ? '（文字向量版，可搜尋複製）' : '（圖片相容版，離線使用）'}`, true);
 
     } catch (err) {
       console.error(err);

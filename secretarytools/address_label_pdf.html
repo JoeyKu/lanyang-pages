@@ -479,8 +479,9 @@
         ctx.fillText((records[i].name || '') + '\u3000君啟', pad, nameY);
 
         // Convert canvas to image and place in PDF (exact cell position, no margin)
-        const imgData = canvas.toDataURL('image/png');
-        doc.addImage(imgData, 'PNG', cellX, cellY, cellW, cellH);
+        // Using JPEG with 0.8 quality instead of PNG to avoid raw RGBA bloat, reducing size by ~98%
+        const imgData = canvas.toDataURL('image/jpeg', 0.8);
+        doc.addImage(imgData, 'JPEG', cellX, cellY, cellW, cellH, undefined, 'FAST');
       }
 
       // Draw cut guides over all pages

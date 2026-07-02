@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>佛光卡</title>
+  
+  <!-- Fonts & Manifest -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Outfit:wght@400;600&display=swap" rel="stylesheet">
+  <script>
+    // iOS Safari pre-parses and registers manifests before DOMContentLoaded or scripts can run,
+    // which overrides the Home Screen shortcut URL with the manifest's static start_url (stripping parameters).
+    // To prevent this, we do not include the manifest link statically in the HTML.
+    // Instead, we dynamically inject the manifest link ONLY for non-iOS devices (Android/Desktop).
+    // iOS Safari will treat it as a standard Web Clip, preserving current URL parameters,
+    // while keeping standalone full-screen mode via the apple-mobile-web-app-capable meta tag.
+    if (!(/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream)) {
+      const link = document.createElement('link');
+      link.rel = 'manifest';
+      link.href = 'manifest.json';
+      document.head.appendChild(link);
+    }
+  </script>
+  
+  <!-- Apple PWA Meta tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="佛光卡">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <!-- QRCode.js Library -->
+  <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
+
+  <style>
+    :root {
+      --primary-color: #a87a4f;
+      --accent-color: #d4a373;
+      --bg-color: #fdfaf3;
+      --card-bg: #ffffff;
+      --text-main: #3d2c1b;
+      --text-secondary: #a87a4f;
+      --shadow: 0 10px 25px rgba(168, 122, 79, 0.08);
+      --radius: 16px;
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 480px;
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      padding: 30px 24px;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(168, 122, 79, 0.1);
+      transition: var(--transition);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* Header styling */
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .header img {
+      width: 80px;
+      height: 80px;
+      margin-bottom: 12px;
+      filter: drop-shadow(0 4px 8px rgba(168, 122, 79, 0.15));
+      animation: float 4s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+
+    .header h1 {
+      font-size: 24px;
+      color: var(--primary-color);
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .header p {
+      color: var(--accent-color);
+      font-size: 14px;
+      margin-top: 4px;
+    }
+
+    /* Form View styling */
+    .form-group {
+      margin-bottom: 20px;
+      text-align: left;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid rgba(212, 163, 115, 0.3);
+      border-radius: 10px;
+      font-size: 16px;
+      font-family: inherit;
+      color: var(--text-main);
+      background-color: var(--bg-color);
+      transition: var(--transition);
+      outline: none;
+    }
+
+    .form-group input:focus {
+      border-color: var(--primary-color);
+      background-color: #ffffff;
+      box-shadow: 0 0 0 4px rgba(168, 122, 79, 0.1);
+    }
+
+    .btn {
+      width: 100%;
+      padding: 15px 20px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+      font-family: inherit;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background-color: var(--primary-color);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(168, 122, 79, 0.2);
+    }
+
+    .btn-primary:hover {
+      background-color: var(--accent-color);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(168, 122, 79, 0.3);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-secondary {
+      background-color: transparent;
+      color: var(--primary-color);
+      border: 2px solid var(--primary-color);
+      margin-top: 15px;
+    }
+
+    .btn-secondary:hover {
+      background-color: var(--bg-color);
+      color: var(--accent-color);
+      border-color: var(--accent-color);
+    }
+
+    .btn-install {
+      background-color: #27ae60;
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(39, 174, 96, 0.2);
+      margin-top: 15px;
+    }
+
+    .btn-install:hover {
+      background-color: #2ece71;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(39, 174, 96, 0.3);
+    }
+
+    /* Card View styling */
+    /* Membership Card Design */
+    .member-card-wrapper {
+      perspective: 1000px;
+      margin-bottom: 25px;
+    }
+
+    .member-card {
+      width: 100%;
+      background: linear-gradient(135deg, #a87a4f 0%, #c4966a 50%, #87582e 100%);
+      border-radius: 16px;
+      padding: 24px;
+      color: #ffffff;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 12px 28px rgba(138, 90, 47, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    /* Subdued decorative lotus watermark in card background */
+    .member-card::before {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 240px;
+      height: 240px;
+      background-image: url('icon.svg');
+      background-repeat: no-repeat;
+      background-size: contain;
+      opacity: 0.08;
+      pointer-events: none;
+    }
+
+    .card-header {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+      padding-bottom: 12px;
+    }
+
+    .card-logo {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-align: left;
+      line-height: 1.3;
+    }
+
+    .card-logo span {
+      display: block;
+      font-size: 8px;
+      font-weight: 400;
+      opacity: 0.8;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .card-badge {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .card-body {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 10px 0;
+    }
+
+    /* Scannable White-background QR Code container */
+    .card-qrcode-wrap {
+      background-color: #ffffff;
+      padding: 12px;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #qrcode {
+      width: 160px;
+      height: 160px;
+    }
+
+    #qrcode img, #qrcode canvas {
+      width: 160px !important;
+      height: 160px !important;
+      display: block;
+    }
+
+    .card-footer {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+      padding-top: 14px;
+      margin-top: 5px;
+    }
+
+    .info-block {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      text-align: left;
+    }
+
+    .info-block .label {
+      font-size: 10px;
+      opacity: 0.7;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .info-block .value {
+      font-size: 18px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    #card-id {
+      font-family: 'Outfit', monospace;
+      font-size: 18px;
+      letter-spacing: 0.5px;
+    }
+
+    /* iOS A2HS Guidance Popover styling */
+    .ios-guide {
+      background-color: rgba(168, 122, 79, 0.05);
+      border: 1px dashed var(--accent-color);
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 20px;
+      text-align: left;
+      font-size: 13px;
+      line-height: 1.6;
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .ios-guide h3 {
+      font-size: 14px;
+      color: var(--primary-color);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ios-guide ol {
+      margin-left: 20px;
+      color: var(--text-main);
+    }
+
+    .ios-guide li {
+      margin-bottom: 6px;
+    }
+
+    .ios-icon {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      vertical-align: middle;
+    }
+
+    /* Modal Styling */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(61, 44, 27, 0.6);
+      backdrop-filter: blur(5px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .modal-content {
+      background-color: var(--card-bg);
+      border-radius: var(--radius);
+      padding: 30px 24px;
+      width: 90%;
+      max-width: 380px;
+      box-shadow: 0 20px 50px rgba(168, 122, 79, 0.25);
+      border: 1px solid rgba(168, 122, 79, 0.15);
+      text-align: center;
+      animation: scaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes scaleUp {
+      from { transform: scale(0.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .modal h3 {
+      color: var(--primary-color);
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .modal-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+      line-height: 1.4;
+    }
+
+    .modal-qrcode-wrap {
+      background-color: #ffffff;
+      padding: 16px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    #share-qrcode {
+      width: 200px;
+      height: 200px;
+    }
+
+    #share-qrcode img, #share-qrcode canvas {
+      width: 200px !important;
+      height: 200px !important;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header">
+      <img src="icon.svg" alt="BLIA Logo">
+      <h1 id="app-title">佛光卡</h1>
+      <p id="app-subtitle"></p>
+    </div>
+
+    <!-- Form View -->
+    <div id="form-view">
+      <form id="card-form" onsubmit="handleFormSubmit(event)">
+        <div class="form-group">
+          <label for="input-name">姓名</label>
+          <input type="text" id="input-name" required placeholder="請輸入姓名" autocomplete="name">
+        </div>
+        <div class="form-group">
+          <label for="input-card-id">佛光卡卡號</label>
+          <input type="text" id="input-card-id" required placeholder="請輸入卡號 (e.g. M00XXXXX)" pattern="[A-Za-z0-9]+" title="請輸入英文字母或數字">
+        </div>
+        <button type="submit" class="btn btn-primary">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
+          確定並產生卡片
+        </button>
+      </form>
+    </div>
+
+    <!-- Card View -->
+    <div id="card-view" class="hidden">
+      <div class="member-card-wrapper">
+        <div class="member-card" id="member-card">
+          
+          <div class="card-body">
+            <div class="card-qrcode-wrap">
+              <div id="qrcode"></div>
+            </div>
+          </div>
+          
+          <div class="card-footer">
+            <div class="info-block">
+              <div class="label">姓名 / Name</div>
+              <div class="value" id="card-name">游育栕</div>
+            </div>
+            <div class="info-block" style="text-align: right;">
+              <div class="label">卡號 / Card ID</div>
+              <div class="value" id="card-id">10001234</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Add to Home Screen Button (PWA Standard) -->
+      <button id="install-btn" class="btn btn-install hidden">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        加到主畫面 (下載捷徑)
+      </button>
+
+      <!-- Toggle button for iOS Safari install guide -->
+      <button id="ios-btn" class="btn btn-secondary hidden">
+        如何加到 iPhone 主畫面？
+      </button>
+
+      <!-- iOS Installation Guide -->
+      <div id="ios-guide" class="ios-guide hidden">
+        <h3>
+          <svg class="ios-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+          iPhone / Safari 安裝教學
+        </h3>
+        <ol>
+          <li>點擊 Safari 瀏覽器下方的分享按鈕 <svg style="width:14px;height:14px;vertical-align:middle" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.684 10.742l4.885 2.443m0 0a3 3 0 11-4.885-2.443m4.885 2.443a3 3 0 105.025-2.25l-4.885-2.443m0 0A3 3 0 1113.88 4.75h-.006m0 0a3 3 0 00-5.025 2.25"></path></svg> (或含有箭頭的向上圖示 📤)。</li>
+          <li>在選單中向下捲動，選擇 **「加入主畫面」** ➕。</li>
+          <li>點選右上角的 **「新增」**，即可在您的桌面上建立「佛光卡」捷徑 App。</li>
+        </ol>
+      </div>
+
+      <!-- Share Link button -->
+      <a id="share-link-btn" class="btn btn-secondary hidden" target="_blank">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+        產生 QR Code 連結
+      </a>
+
+      <!-- Re-enter button -->
+      <button id="back-btn" class="btn btn-secondary" onclick="resetForm()">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"></path></svg>
+        重新輸入資料
+      </button>
+    </div>
+  </div>
+
+  <!-- Share QR Code Modal -->
+  <div id="share-modal" class="modal hidden">
+    <div class="modal-content">
+      <h3>分享會員卡 QR Code</h3>
+      <p class="modal-desc">請他人使用相機掃描下方條碼，即可在他們的手機上開啟您的數位會員卡</p>
+      <div class="modal-qrcode-wrap">
+        <div id="share-qrcode"></div>
+      </div>
+      <button class="btn btn-primary" onclick="closeShareModal()">關閉</button>
+    </div>
+  </div>
+
+  <script>
+    // Register Service Worker for PWA
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .then(() => console.log('Service Worker Registered'))
+        .catch(err => console.error('Service Worker registration failed:', err));
+    }
+
+    // DOM Elements
+    const formView = document.getElementById('form-view');
+    const cardView = document.getElementById('card-view');
+    const cardName = document.getElementById('card-name');
+    const cardId = document.getElementById('card-id');
+    const qrcodeContainer = document.getElementById('qrcode');
+    const appSubtitle = document.getElementById('app-subtitle');
+    const installBtn = document.getElementById('install-btn');
+    const iosBtn = document.getElementById('ios-btn');
+    const iosGuide = document.getElementById('ios-guide');
+    const shareLinkBtn = document.getElementById('share-link-btn');
+    const shareModal = document.getElementById('share-modal');
+    const shareQrcodeContainer = document.getElementById('share-qrcode');
+
+    // State Variables
+    let deferredPrompt;
+    let qrcodeInstance = null;
+    let shareQrcodeInstance = null;
+
+    // Parse URL params on load
+    window.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      let name = urlParams.get('name');
+      let card = urlParams.get('card_id');
+      
+      
+
+      // If parameters are missing, try retrieving from localStorage
+      if (!name || !card) {
+        name = localStorage.getItem('blia_card_name');
+        card = localStorage.getItem('blia_card_id');
+        
+        // If found in localStorage, update URL parameters without reloading
+        if (name && card) {
+          const newUrl = `${window.location.pathname}?name=${encodeURIComponent(name)}&card_id=${encodeURIComponent(card)}`;
+          window.history.replaceState({ path: newUrl }, '', newUrl);
+        }
+      }
+
+      if (name && card) {
+        showCard(name, card);
+      } else {
+        showForm();
+      }
+
+      // Handle iOS Specific Prompt
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+      if (isIOS && !isStandalone) {
+        iosBtn.classList.remove('hidden');
+      }
+    });
+
+    // Form submit redirects to the same page with query parameters
+    function handleFormSubmit(e) {
+      e.preventDefault();
+      const name = document.getElementById('input-name').value.trim();
+      const card = document.getElementById('input-card-id').value.trim();
+      
+      if (name && card) {
+        // Save to localStorage for persistence when launching PWA
+        localStorage.setItem('blia_card_name', name);
+        localStorage.setItem('blia_card_id', card);
+
+        // Perform hard redirect to add parameters to URL so iOS Safari registers it for the shortcut URL
+        window.location.href = `${window.location.pathname}?name=${encodeURIComponent(name)}&card_id=${encodeURIComponent(card)}`;
+      }
+    }
+
+    // Display Card View and generate QR code
+    function showCard(name, card) {
+      formView.classList.add('hidden');
+      cardView.classList.remove('hidden');
+      //appSubtitle.textContent = '我的數位佛光卡';
+
+      cardName.textContent = name;
+      cardId.textContent = card;
+
+      // Clear previous QR code
+      qrcodeContainer.innerHTML = '';
+
+      // Generate new QR code containing the member card number
+      qrcodeInstance = new QRCode(qrcodeContainer, {
+        text: card,
+        width: 160,
+        height: 160,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.M
+      });
+
+      // Control button visibilities based on show=no parameter
+      const urlParams = new URLSearchParams(window.location.search);
+      const isShowNo = urlParams.get('show') === 'no';
+      const backBtn = document.getElementById('back-btn');
+
+      if (isShowNo) {
+        backBtn.classList.add('hidden');
+        if (shareLinkBtn) shareLinkBtn.classList.add('hidden');
+      } else {
+        backBtn.classList.remove('hidden');
+        if (shareLinkBtn) {
+          shareLinkBtn.classList.remove('hidden');
+          const shareUrl = `${window.location.origin}${window.location.pathname}?name=${encodeURIComponent(name)}&card_id=${encodeURIComponent(card)}&show=no`;
+          shareLinkBtn.setAttribute('href', shareUrl);
+        }
+      }
+    }
+
+    // Display Form View and clear URL params
+    function showForm() {
+      formView.classList.remove('hidden');
+      cardView.classList.add('hidden');
+      appSubtitle.textContent = '個人數位卡包與條碼';
+      document.getElementById('input-name').value = '';
+      document.getElementById('input-card-id').value = '';
+    }
+
+    function resetForm() {
+      // Clear localStorage
+      localStorage.removeItem('blia_card_name');
+      localStorage.removeItem('blia_card_id');
+
+      // Hard redirect to clear parameters from address bar completely
+      window.location.href = window.location.pathname;
+    }
+
+    // Dynamic manifest updating removed to prevent iOS 404 launch issues
+
+    // Standard PWA A2HS logic
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installBtn.classList.remove('hidden');
+    });
+
+    installBtn.addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log(`User installation outcome: ${outcome}`);
+        deferredPrompt = null;
+        installBtn.classList.add('hidden');
+      }
+    });
+
+    // Toggle iOS install instructions
+    iosBtn.addEventListener('click', () => {
+      iosGuide.classList.toggle('hidden');
+      if (!iosGuide.classList.contains('hidden')) {
+        iosGuide.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+
+    // Generate share QR Code inside modal, show modal and copy link on click
+    if (shareLinkBtn) {
+      shareLinkBtn.addEventListener('click', (e) => {
+        e.preventDefault(); // Prevent standard link navigation
+        const href = shareLinkBtn.getAttribute('href');
+        if (href) {
+          // Clear previous share QR Code
+          shareQrcodeContainer.innerHTML = '';
+          
+          // Generate new QR code containing the full share URL
+          shareQrcodeInstance = new QRCode(shareQrcodeContainer, {
+            text: href,
+            width: 200,
+            height: 200,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.M
+          });
+
+          // Show the modal
+          shareModal.classList.remove('hidden');
+
+          // Copy URL to clipboard
+          navigator.clipboard.writeText(href).then(() => {
+            console.log('Share URL copied to clipboard');
+          }).catch(err => {
+            console.warn('Failed to copy link:', err);
+          });
+        }
+      });
+    }
+
+    // Close the share modal
+    function closeShareModal() {
+      shareModal.classList.add('hidden');
+    }
+  </script>
+</body>
+</html>

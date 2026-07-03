@@ -1,0 +1,31 @@
+{
+  "name": "佛光會員卡",
+  "short_name": "佛光卡",
+  "description": "國際佛光會數位會員卡與 QR Code 產生器",
+  "start_url": "card.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fdfaf3",
+  "theme_color": "#a87a4f",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

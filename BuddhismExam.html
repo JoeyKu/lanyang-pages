@@ -96,11 +96,35 @@
         h1 { font-size: 1.8em; }
         h2 { font-size: 1.5em; margin-top: 30px; }
         .hidden { display: none !important; }
-        #mock-exam-btn-container { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
+        #mock-exam-btn-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
         #start-mock-exam-btn {
             background-color: #8B4513; color: white; border: none; padding: 15px 30px;
             border-radius: 8px; cursor: pointer; font-size: 1.2em; font-weight: bold;
             transition: background-color 0.3s, transform 0.2s;
+        }
+        #download-quiz-btn {
+            background-color: transparent;
+            color: #8B4513;
+            border: 2px solid #8B4513;
+            padding: 13px 28px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2em;
+            font-weight: bold;
+            transition: background-color 0.3s, color 0.3s, transform 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-decoration: none;
         }
         #practice-menu-container .unit { margin-bottom: 25px; }
         #practice-menu-container .quiz-type-buttons { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
@@ -196,6 +220,7 @@
         }
         @media (hover: hover) {
             #start-mock-exam-btn:hover { background-color: #A0522D; transform: translateY(-2px); }
+            #download-quiz-btn:hover { background-color: #8B4513; color: white; transform: translateY(-2px); }
             #practice-menu-container button:hover { background-color: var(--accent-color); transform: translateY(-2px); }
             .option-btn:hover:not(:disabled) { background-color: var(--accent-color); color: white; border-color: var(--accent-color); }
             .option-btn.selected:hover:not(:disabled) { background-color: #8a6a4a; }
@@ -359,9 +384,13 @@
                  <h2 id="search-results-title">搜尋結果 (0 題)</h2>
                  <div id="search-results-list" class="search-results-list"></div>
              </div>
-             <div id="mock-exam-btn-container">
-                 <button id="start-mock-exam-btn">開始模擬測驗</button>
-             </div>
+              <div id="mock-exam-btn-container">
+                  <button id="start-mock-exam-btn">開始模擬測驗</button>
+                  <a href="https://reurl.cc/KEKbYR" target="_blank" id="download-quiz-btn">
+                      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="vertical-align: middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"></path></svg>
+                      下載題庫
+                  </a>
+              </div>
              <div id="practice-menu-container"></div>
         </div>
 

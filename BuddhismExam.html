@@ -203,6 +203,138 @@
             #submit-exam-btn:hover, #retry-btn:hover { background-color: #388e3c; }
             #back-to-menu-btn:hover { background-color: #e0e0e0; }
         }
+
+        /* Search Box styling */
+        .search-box-container {
+            margin: 20px auto;
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+        }
+        .search-input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        #search-input {
+            width: 100%;
+            padding: 12px 40px 12px 16px;
+            font-size: 1.05rem;
+            border: 2px solid var(--accent-color);
+            border-radius: 25px;
+            background-color: var(--primary-bg);
+            color: var(--text-color);
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+            font-family: inherit;
+        }
+        #search-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(168, 122, 79, 0.15);
+            background-color: #ffffff;
+        }
+        #clear-search-btn {
+            position: absolute;
+            right: 15px;
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        #clear-search-btn:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+            color: #333;
+        }
+        
+        /* Search Results styling */
+        .search-results-list {
+            list-style: none;
+            padding: 0;
+            margin: 20px 0;
+            text-align: left;
+        }
+        .search-result-item {
+            border: 1px solid rgba(168, 122, 79, 0.2);
+            background-color: #fcfbfa;
+            border-left: 5px solid var(--primary-color);
+            margin-bottom: 20px;
+            padding: 18px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .search-result-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(168, 122, 79, 0.1);
+        }
+        .search-result-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85em;
+            color: #888;
+            margin-bottom: 10px;
+            border-bottom: 1px dashed rgba(0, 0, 0, 0.05);
+            padding-bottom: 6px;
+        }
+        .search-result-unit {
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        .search-result-question {
+            font-size: 1.1em;
+            font-weight: bold;
+            line-height: 1.6;
+            margin-bottom: 12px;
+            color: var(--text-color);
+        }
+        .search-result-options {
+            display: grid;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .search-result-option {
+            padding: 10px 14px;
+            background-color: #ffffff;
+            border: 1px solid rgba(0,0,0,0.08);
+            border-radius: 6px;
+            font-size: 0.95em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .search-result-option.correct {
+            background-color: #e8f5e9;
+            border-color: var(--correct-color);
+            color: #2e7d32;
+            font-weight: bold;
+        }
+        .search-result-desc {
+            background-color: #fff9e6;
+            border-left: 3px solid #ffb300;
+            padding: 10px 14px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #664d03;
+            margin-top: 10px;
+        }
+        .highlight {
+            background-color: #fff3cd;
+            color: #664d03;
+            padding: 0 2px;
+            border-radius: 2px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -217,6 +349,16 @@
         <div id="menu-container">
              <h1>國際佛光會 2026 年全球佛學會考題庫</h1>
              <h2>《當代人心思潮》</h2>
+             <div class="search-box-container">
+                 <div class="search-input-wrapper">
+                     <input type="text" id="search-input" placeholder="🔍 搜尋題庫題目...">
+                     <button id="clear-search-btn" class="hidden" title="清除搜尋">✕</button>
+                 </div>
+             </div>
+             <div id="search-results-container" class="hidden">
+                 <h2 id="search-results-title">搜尋結果 (0 題)</h2>
+                 <div id="search-results-list" class="search-results-list"></div>
+             </div>
              <div id="mock-exam-btn-container">
                  <button id="start-mock-exam-btn">開始模擬測驗</button>
              </div>
@@ -317,6 +459,7 @@
             return '單選題';
         }
 
+
         function showView(view) {
             if (autoAdvanceTimeout) {
                 clearTimeout(autoAdvanceTimeout);
@@ -329,6 +472,8 @@
 
             if (view === 'menu') {
                 menuContainer.classList.remove('hidden');
+                resetSearch();
+                if (searchInput) searchInput.value = '';
             } else if (view === 'quiz') {
                 quizContainer.classList.remove('hidden');
                 backToMenuBtn.classList.remove('hidden');
@@ -830,6 +975,142 @@
         document.getElementById('font-dec-btn').addEventListener('click', () => changeFontSize(-0.1));
         document.getElementById('font-reset-btn').addEventListener('click', resetFontSize);
         document.getElementById('font-inc-btn').addEventListener('click', () => changeFontSize(0.1));
+
+        // --- SEARCH FEATURE ---
+        const searchInput = document.getElementById('search-input');
+        const clearSearchBtn = document.getElementById('clear-search-btn');
+        const searchResultsContainer = document.getElementById('search-results-container');
+        const mockExamBtnContainer = document.getElementById('mock-exam-btn-container');
+        const searchResultsList = document.getElementById('search-results-list');
+        const searchResultsTitle = document.getElementById('search-results-title');
+
+        if (searchInput) {
+            searchInput.addEventListener('input', () => {
+                const query = searchInput.value;
+                if (query.trim()) {
+                    clearSearchBtn.classList.remove('hidden');
+                    mockExamBtnContainer.classList.add('hidden');
+                    practiceMenuContainer.classList.add('hidden');
+                    searchResultsContainer.classList.remove('hidden');
+                    performSearch(query);
+                } else {
+                    resetSearch();
+                }
+            });
+        }
+
+        if (clearSearchBtn) {
+            clearSearchBtn.addEventListener('click', () => {
+                searchInput.value = '';
+                resetSearch();
+            });
+        }
+
+        function resetSearch() {
+            if (clearSearchBtn) clearSearchBtn.classList.add('hidden');
+            if (searchResultsContainer) searchResultsContainer.classList.add('hidden');
+            if (mockExamBtnContainer) mockExamBtnContainer.classList.remove('hidden');
+            if (practiceMenuContainer) practiceMenuContainer.classList.remove('hidden');
+            if (searchResultsList) searchResultsList.innerHTML = '';
+        }
+
+        function performSearch(query) {
+            query = query.trim().toLowerCase();
+            const results = [];
+            
+            Object.entries(activeQuizData).forEach(([unitName, unitData]) => {
+                Object.entries(unitData).forEach(([typeName, questions]) => {
+                    questions.forEach(q => {
+                        const qText = String(q.q || '').toLowerCase();
+                        
+                        if (qText.includes(query)) {
+                            results.push({ unitName, typeName, question: q });
+                        }
+                    });
+                });
+            });
+
+            renderSearchResults(results, query);
+        }
+
+        function highlightText(text, keyword) {
+            if (!keyword) return text;
+            const escapedKeyword = keyword.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+            const regex = new RegExp(`(${escapedKeyword})`, 'gi');
+            return text.replace(regex, '<span class="highlight">$1</span>');
+        }
+
+        function renderSearchResults(results, query) {
+            searchResultsList.innerHTML = '';
+            searchResultsTitle.textContent = `搜尋結果 (${results.length} 題)`;
+
+            if (results.length === 0) {
+                searchResultsList.innerHTML = '<div style="text-align: center; color: #888; padding: 40px 0; font-size: 1.1em;">找不到符合的題目</div>';
+                return;
+            }
+
+            results.forEach(({ unitName, typeName, question }) => {
+                const qType = getQuestionType(question);
+                
+                let metaHTML = `<div class="search-result-meta">`;
+                if (unitName !== '全部題型') {
+                    metaHTML += `<span class="search-result-unit">${unitName}</span>`;
+                }
+                
+                let tagClass = 'tf';
+                if (qType === '單選題') tagClass = 'sc';
+                else if (qType === '複選題') tagClass = 'mc';
+                
+                metaHTML += `<span class="question-type-tag ${tagClass}">${qType}</span>`;
+                metaHTML += `</div>`;
+
+                const cleanedQ = cleanQuestionText(question.q);
+                const highlightedQ = highlightText(cleanedQ, query);
+                const questionHTML = `<div class="search-result-question">${highlightedQ}</div>`;
+
+                let optionsHTML = '';
+                if (qType === '是非題') {
+                    const isO = question.a === true;
+                    optionsHTML = `
+                        <div class="search-result-options">
+                            <div class="search-result-option ${isO ? 'correct' : ''}">
+                                <span>O (是)</span> ${isO ? '<span>✓</span>' : ''}
+                            </div>
+                            <div class="search-result-option ${!isO ? 'correct' : ''}">
+                                <span>X (非)</span> ${!isO ? '<span>✓</span>' : ''}
+                            </div>
+                        </div>
+                    `;
+                } else if (question.o) {
+                    optionsHTML = `<div class="search-result-options">`;
+                    question.o.forEach(optText => {
+                        const match = optText.match(/^\s*([A-Z])\.\s*|^\s*\(([A-Z])\)/);
+                        const letter = match ? (match[1] || match[2]) : '';
+                        
+                        const isCorrect = Array.isArray(question.a) 
+                            ? question.a.includes(letter) 
+                            : (letter === question.a);
+                        
+                        const highlightedOpt = highlightText(optText, query);
+                        optionsHTML += `<div class="search-result-option ${isCorrect ? 'correct' : ''}">
+                            <span>${highlightedOpt}</span> ${isCorrect ? '<span>✓</span>' : ''}
+                        </div>`;
+                    });
+                    optionsHTML += `</div>`;
+                }
+
+                let descHTML = '';
+                if (question.desc) {
+                    const highlightedDesc = highlightText(question.desc, query);
+                    descHTML = `<div class="search-result-desc"><strong>解析：</strong>${highlightedDesc}</div>`;
+                }
+
+                const card = document.createElement('div');
+                card.className = 'search-result-item';
+                card.innerHTML = `${metaHTML}${questionHTML}${optionsHTML}${descHTML}`;
+                searchResultsList.appendChild(card);
+            });
+        }
 
         initialize();
 

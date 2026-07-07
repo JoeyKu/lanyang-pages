@@ -1,4 +1,4 @@
-const CACHE_NAME = 'blia-card-cache-v18';
+const CACHE_NAME = 'blia-card-cache-v20';
 const ASSETS = [
   './',
   './index.html',
@@ -6,7 +6,7 @@ const ASSETS = [
   './icon.svg',
   './icon-192.png',
   './icon-512.png',
-  './buddha_logo.jpg?v=2',
+  './buddha_logo.jpg?v=4',
   'https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js',
   'https://cdn.jsdelivr.net/npm/html5-qrcode/minified/html5-qrcode.min.js'
 ];

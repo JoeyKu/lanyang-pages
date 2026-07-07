@@ -14,6 +14,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  actions: write
 
 # Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
 # However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
@@ -55,3 +56,16 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+      - name: Delete artifact immediately after deployment
+        if: always()
+        run: |
+          # Get artifact ID for 'github-pages'
+          artifact_id=$(gh api repos/${{ github.repository }}/actions/artifacts?name=github-pages --jq '.artifacts[0].id')
+          if [ -n "$artifact_id" ] && [ "$artifact_id" != "null" ]; then
+            gh api -X DELETE repos/${{ github.repository }}/actions/artifacts/$artifact_id
+            echo "Artifact $artifact_id deleted successfully."
+          else
+            echo "No deployment artifact found to delete."
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

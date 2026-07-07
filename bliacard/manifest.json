@@ -1,8 +1,8 @@
 {
-  "name": "佛光會員卡",
+  "name": "佛光卡",
   "short_name": "佛光卡",
-  "description": "國際佛光會數位會員卡與 QR Code 產生器",
-  "start_url": "card.html",
+  "description": "國際佛光會數位佛光卡與 QR Code 產生器",
+  "start_url": "index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",

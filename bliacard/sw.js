@@ -1,12 +1,14 @@
-const CACHE_NAME = 'blia-card-cache-v8';
+const CACHE_NAME = 'blia-card-cache-v18';
 const ASSETS = [
   './',
-  './card.html',
+  './index.html',
   './manifest.json',
   './icon.svg',
   './icon-192.png',
   './icon-512.png',
-  'https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js'
+  './buddha_logo.jpg?v=2',
+  'https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js',
+  'https://cdn.jsdelivr.net/npm/html5-qrcode/minified/html5-qrcode.min.js'
 ];
 
 self.addEventListener('install', (e) => {
@@ -36,7 +38,7 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (e) => {
   e.respondWith(
-    caches.match(e.request).then((cachedResponse) => {
+    caches.match(e.request, { ignoreSearch: true }).then((cachedResponse) => {
       if (cachedResponse) {
         return cachedResponse;
       }

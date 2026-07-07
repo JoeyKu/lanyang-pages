@@ -30,6 +30,8 @@
 
   <!-- QRCode.js Library -->
   <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
+  <!-- Html5Qrcode Library for QR/Barcode Scanning -->
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode/minified/html5-qrcode.min.js"></script>
 
   <style>
     :root {
@@ -384,6 +386,72 @@
       vertical-align: middle;
     }
 
+    /* Input field with action button */
+    .input-with-action {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      width: 100%;
+    }
+    
+    .input-with-action input {
+      flex-grow: 1;
+    }
+    
+    .action-btn {
+      background-color: var(--primary-color);
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: var(--transition);
+      flex-shrink: 0;
+    }
+    
+    .action-btn:hover {
+      background-color: var(--accent-color);
+    }
+    
+    #reader-container {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4/3;
+      background: #000;
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 20px;
+      border: 2px solid var(--accent-color);
+    }
+
+    /* iOS installation prompt */
+    .ios-install-prompt {
+      background-color: rgba(168, 122, 79, 0.08);
+      border: 1px solid rgba(168, 122, 79, 0.2);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-top: 15px;
+      margin-bottom: 5px;
+      text-align: left;
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--text-main);
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      animation: fadeIn 0.4s ease-out;
+    }
+    
+    .ios-install-prompt svg.prompt-icon {
+      color: var(--primary-color);
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
     /* Modal Styling */
     .modal {
       position: fixed;
@@ -458,7 +526,7 @@
 
   <div class="container">
     <div class="header">
-      <img src="icon.svg" alt="BLIA Logo">
+      <img src="buddha_logo.jpg?v=2" alt="佛光卡 Logo">
       <h1 id="app-title">佛光卡</h1>
       <p id="app-subtitle"></p>
     </div>
@@ -473,6 +541,15 @@
         <div class="form-group">
           <label for="input-card-id">佛光卡卡號</label>
           <input type="text" id="input-card-id" required placeholder="請輸入卡號 (e.g. M00XXXXX)" pattern="[A-Za-z0-9]+" title="請輸入英文字母或數字">
+        </div>
+        <div class="form-group">
+          <label for="input-card-uid">佛光卡 ID</label>
+          <div class="input-with-action">
+            <input type="text" id="input-card-uid" required placeholder="請輸入佛光卡 ID (用於產生條碼)" pattern="[A-Za-z0-9]+" title="請輸入英文字母或數字">
+            <button type="button" id="scan-btn" class="action-btn" onclick="openScanner()" title="掃描 QR Code">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            </button>
+          </div>
         </div>
         <button type="submit" class="btn btn-primary">
           <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
@@ -511,23 +588,13 @@
         加到主畫面 (下載捷徑)
       </button>
 
-      <!-- Toggle button for iOS Safari install guide -->
-      <button id="ios-btn" class="btn btn-secondary hidden">
-        如何加到 iPhone 主畫面？
-      </button>
-
-      <!-- iOS Installation Guide -->
-      <div id="ios-guide" class="ios-guide hidden">
-        <h3>
-          <svg class="ios-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
-          iPhone / Safari 安裝教學
-        </h3>
-        <ol>
-          <li>點擊 Safari 瀏覽器下方的分享按鈕 <svg style="width:14px;height:14px;vertical-align:middle" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.684 10.742l4.885 2.443m0 0a3 3 0 11-4.885-2.443m4.885 2.443a3 3 0 105.025-2.25l-4.885-2.443m0 0A3 3 0 1113.88 4.75h-.006m0 0a3 3 0 00-5.025 2.25"></path></svg> (或含有箭頭的向上圖示 📤)。</li>
-          <li>在選單中向下捲動，選擇 **「加入主畫面」** ➕。</li>
-          <li>點選右上角的 **「新增」**，即可在您的桌面上建立「佛光卡」捷徑 App。</li>
-        </ol>
+      <!-- iOS Installation Prompt -->
+      <div id="ios-install-prompt" class="ios-install-prompt hidden">
+        <svg class="prompt-icon" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <div>提示：點擊瀏覽器下方的分享按鈕 <svg style="width:14px;height:14px;vertical-align:middle;display:inline-block;" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.684 10.742l4.885 2.443m0 0a3 3 0 11-4.885-2.443m4.885 2.443a3 3 0 105.025-2.25l-4.885-2.443m0 0A3 3 0 1113.88 4.75h-.006m0 0a3 3 0 00-5.025 2.25"></path></svg> (或 📤)，選擇「<strong>加入主畫面</strong>」➕ 即可下載此會員卡 App。</div>
       </div>
+
+      
 
       <!-- Share Link button -->
       <a id="share-link-btn" class="btn btn-secondary hidden" target="_blank">
@@ -555,6 +622,18 @@
     </div>
   </div>
 
+  <!-- Camera Scanner Modal -->
+  <div id="scanner-modal" class="modal hidden">
+    <div class="modal-content" style="max-width: 450px; padding: 20px;">
+      <h3>掃描佛光卡 QR Code / 條碼</h3>
+      <p class="modal-desc">請將實體卡片的 QR Code 或條碼對準相機鏡頭</p>
+      <div id="reader-container">
+        <div id="reader"></div>
+      </div>
+      <button type="button" class="btn btn-secondary" onclick="closeScanner()" style="margin-top: 0;">取消</button>
+    </div>
+  </div>
+
   <script>
     // Register Service Worker for PWA
     if ('serviceWorker' in navigator) {
@@ -571,50 +650,45 @@
     const qrcodeContainer = document.getElementById('qrcode');
     const appSubtitle = document.getElementById('app-subtitle');
     const installBtn = document.getElementById('install-btn');
-    const iosBtn = document.getElementById('ios-btn');
-    const iosGuide = document.getElementById('ios-guide');
     const shareLinkBtn = document.getElementById('share-link-btn');
     const shareModal = document.getElementById('share-modal');
     const shareQrcodeContainer = document.getElementById('share-qrcode');
+    const scannerModal = document.getElementById('scanner-modal');
 
     // State Variables
     let deferredPrompt;
     let qrcodeInstance = null;
     let shareQrcodeInstance = null;
+    let html5QrCodeInstance = null;
+    let isScanning = false;
 
     // Parse URL params on load
     window.addEventListener('DOMContentLoaded', () => {
       const urlParams = new URLSearchParams(window.location.search);
       let name = urlParams.get('name');
       let card = urlParams.get('card_id');
-      
-      
+      let uid = urlParams.get('card_uid');
 
       // If parameters are missing, try retrieving from localStorage
-      if (!name || !card) {
+      if (!name || !card || !uid) {
         name = localStorage.getItem('blia_card_name');
         card = localStorage.getItem('blia_card_id');
+        uid = localStorage.getItem('blia_card_uid');
         
         // If found in localStorage, update URL parameters without reloading
-        if (name && card) {
-          const newUrl = `${window.location.pathname}?name=${encodeURIComponent(name)}&card_id=${encodeURIComponent(card)}`;
+        if (name && card && uid) {
+          const newUrl = `${window.location.pathname}?name=${encodeURIComponent(name)}&card_id=${encodeURIComponent(card)}&card_uid=${encodeURIComponent(uid)}&show=no`;
           window.history.replaceState({ path: newUrl }, '', newUrl);
         }
       }
 
-      if (name && card) {
-        showCard(name, card);
+      if (name && card && uid) {
+        showCard(name, card, uid);
       } else {
         showForm();
       }
 
-      // Handle iOS Specific Prompt
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-
-      if (isIOS && !isStandalone) {
-        iosBtn.classList.remove('hidden');
-      }
+      // iOS Installation instructions removed
     });
 
     // Form submit redirects to the same page with query parameters
@@ -622,19 +696,21 @@
       e.preventDefault();
       const name = document.getElementById('input-name').value.trim();
       const card = document.getElementById('input-card-id').value.trim();
+      const uid = document.getElementById('input-card-uid').value.trim();
       
-      if (name && card) {
+      if (name && card && uid) {
         // Save to localStorage for persistence when launching PWA
         localStorage.setItem('blia_card_name', name);
         localStorage.setItem('blia_card_id', card);
+        localStorage.setItem('blia_card_uid', uid);
 
         // Perform hard redirect to add parameters to URL so iOS Safari registers it for the shortcut URL
-        window.location.href = `${window.location.pathname}?name=${encodeURIComponent(name)}&card_id=${encodeURIComponent(card)}`;
+        window.location.href = `${window.location.pathname}?name=${encodeURIComponent(name)}&card_id=${encodeURIComponent(card)}&card_uid=${encodeURIComponent(uid)}&show=no`;
       }
     }
 
     // Display Card View and generate QR code
-    function showCard(name, card) {
+    function showCard(name, card, cardUid) {
       formView.classList.add('hidden');
       cardView.classList.remove('hidden');
       //appSubtitle.textContent = '我的數位佛光卡';
@@ -645,9 +721,9 @@
       // Clear previous QR code
       qrcodeContainer.innerHTML = '';
 
-      // Generate new QR code containing the member card number
+      // Generate new QR code containing the member card UID (佛光卡 ID)
       qrcodeInstance = new QRCode(qrcodeContainer, {
-        text: card,
+        text: cardUid,
         width: 160,
         height: 160,
         colorDark: "#000000",
@@ -655,20 +731,37 @@
         correctLevel: QRCode.CorrectLevel.M
       });
 
-      // Control button visibilities based on show=no parameter
+      // Control button visibilities based on show=no parameter and standalone mode
       const urlParams = new URLSearchParams(window.location.search);
       const isShowNo = urlParams.get('show') === 'no';
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
       const backBtn = document.getElementById('back-btn');
 
-      if (isShowNo) {
+      const localName = localStorage.getItem('blia_card_name');
+      const localCard = localStorage.getItem('blia_card_id');
+      const isOwner = (name === localName && card === localCard);
+
+      if (isShowNo && (isStandalone || !isOwner)) {
         backBtn.classList.add('hidden');
         if (shareLinkBtn) shareLinkBtn.classList.add('hidden');
       } else {
         backBtn.classList.remove('hidden');
         if (shareLinkBtn) {
           shareLinkBtn.classList.remove('hidden');
-          const shareUrl = `${window.location.origin}${window.location.pathname}?name=${encodeURIComponent(name)}&card_id=${encodeURIComponent(card)}&show=no`;
+          const shareUrl = `${window.location.origin}${window.location.pathname}?name=${encodeURIComponent(name)}&card_id=${encodeURIComponent(card)}&card_uid=${encodeURIComponent(cardUid)}&show=no`;
           shareLinkBtn.setAttribute('href', shareUrl);
+        }
+      }
+
+      // Show iOS install prompt if iOS Safari, not standalone, and is the owner
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+      const iosPrompt = document.getElementById('ios-install-prompt');
+      
+      if (iosPrompt) {
+        if (isIOS && !isStandalone && isOwner) {
+          iosPrompt.classList.remove('hidden');
+        } else {
+          iosPrompt.classList.add('hidden');
         }
       }
     }
@@ -677,15 +770,17 @@
     function showForm() {
       formView.classList.remove('hidden');
       cardView.classList.add('hidden');
-      appSubtitle.textContent = '個人數位卡包與條碼';
+      appSubtitle.textContent = '數位佛光卡與條碼';
       document.getElementById('input-name').value = '';
       document.getElementById('input-card-id').value = '';
+      document.getElementById('input-card-uid').value = '';
     }
 
     function resetForm() {
       // Clear localStorage
       localStorage.removeItem('blia_card_name');
       localStorage.removeItem('blia_card_id');
+      localStorage.removeItem('blia_card_uid');
 
       // Hard redirect to clear parameters from address bar completely
       window.location.href = window.location.pathname;
@@ -710,13 +805,7 @@
       }
     });
 
-    // Toggle iOS install instructions
-    iosBtn.addEventListener('click', () => {
-      iosGuide.classList.toggle('hidden');
-      if (!iosGuide.classList.contains('hidden')) {
-        iosGuide.scrollIntoView({ behavior: 'smooth' });
-      }
-    });
+    // iOS Guide listener removed
 
     // Generate share QR Code inside modal, show modal and copy link on click
     if (shareLinkBtn) {
@@ -753,6 +842,59 @@
     // Close the share modal
     function closeShareModal() {
       shareModal.classList.add('hidden');
+    }
+
+    // Camera scanner controls
+    function openScanner() {
+      const scannerModal = document.getElementById('scanner-modal');
+      scannerModal.classList.remove('hidden');
+
+      html5QrCodeInstance = new Html5Qrcode("reader");
+      isScanning = true;
+
+      html5QrCodeInstance.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: (w, h) => {
+            const size = Math.min(w, h) * 0.7;
+            return { width: size, height: size };
+          }
+        },
+        (decodedText, decodedResult) => {
+          document.getElementById('input-card-uid').value = decodedText;
+          closeScanner();
+        },
+        (errorMessage) => {}
+      ).catch(err => {
+        console.error("Camera start failed:", err);
+        alert("無法啟用相機，請確認已授予相機存取權限。");
+        closeScanner();
+      });
+    }
+
+    function closeScanner() {
+      const scannerModal = document.getElementById('scanner-modal');
+      scannerModal.classList.add('hidden');
+
+      if (html5QrCodeInstance) {
+        if (isScanning) {
+          isScanning = false;
+          html5QrCodeInstance.stop()
+            .then(() => {
+              html5QrCodeInstance = null;
+              document.getElementById('reader').innerHTML = '';
+            })
+            .catch(err => {
+              console.warn("Scanner stop warning:", err);
+              html5QrCodeInstance = null;
+              document.getElementById('reader').innerHTML = '';
+            });
+        } else {
+          html5QrCodeInstance = null;
+          document.getElementById('reader').innerHTML = '';
+        }
+      }
     }
   </script>
 </body>

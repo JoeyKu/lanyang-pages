@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>佛學會考人數統計 - 法師工具箱</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700&family=Noto+Sans+TC:wght@300;400;500&display=swap');
+  
+  :root {
+    --primary: #a87a4f; 
+    --primary-mid: #d4a373; 
+    --primary-pale: #e8dcc4;
+    --bg-light: #fdfaf3; 
+    --bg-white: #ffffff; 
+    --text-dark: #3d2c1b;
+    --text-secondary: #6b4f35;
+    --border: #d4b896; 
+    --red: #c0392b; 
+    --shadow: rgba(168, 122, 79, .14);
+    --radius: 16px;
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: var(--bg-light);
+    color: var(--text-dark);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 40px 20px;
+  }
+  
+  main {
+    width: 100%;
+    max-width: 800px;
+  }
+
+  .back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--primary);
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    transition: var(--transition);
+  }
+
+  .back-btn:hover {
+    color: var(--primary-mid);
+    transform: translateX(-5px);
+  }
+
+  .header {
+    margin-bottom: 40px;
+    text-align: center;
+  }
+
+  .header h1 {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 42px;
+    color: var(--primary);
+    margin-bottom: 8px;
+  }
+
+  .header p {
+    color: var(--text-secondary);
+    font-size: 18px;
+  }
+
+  .tool-card {
+    background: var(--bg-white);
+    border-radius: var(--radius);
+    padding: 40px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(168, 122, 79, 0.1);
+    margin-bottom: 40px;
+  }
+
+  /* Instructions Alert Box */
+  .instructions-box {
+    background-color: #faf3e8;
+    border-left: 4px solid var(--primary-mid);
+    border-radius: 8px;
+    padding: 18px 20px;
+    margin-bottom: 25px;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  .instructions-box h3 {
+    color: var(--primary);
+    font-size: 16px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .instructions-box ul {
+    padding-left: 20px;
+    color: var(--text-dark);
+  }
+
+  .instructions-box li {
+    margin-bottom: 6px;
+  }
+
+  .instructions-box strong {
+    color: var(--primary);
+  }
+
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 14px;
+    background: #fff;
+    padding: 48px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: var(--transition);
+    position: relative;
+    margin-bottom: 24px;
+  }
+
+  .drop-zone:hover, .drop-zone.over {
+    border-color: var(--primary);
+    background: var(--bg-light);
+  }
+
+  .drop-zone input[type=file] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .dz-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+  }
+
+  .dz-label {
+    font-size: 18px;
+    color: var(--primary);
+    font-weight: 600;
+    letter-spacing: .5px;
+  }
+
+  .dz-hint {
+    font-size: 14px;
+    color: #888;
+    margin-top: 6px;
+  }
+  
+  .file-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+
+  .chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-light);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 14px;
+    color: var(--primary);
+    font-weight: 500;
+  }
+
+  .chip .remove {
+    cursor: pointer;
+    color: #999;
+    font-size: 16px;
+    background: none;
+    border: none;
+    padding: 0;
+    margin-left: 4px;
+  }
+
+  .chip .remove:hover {
+    color: var(--red);
+  }
+  
+  #status {
+    font-size: 14px;
+    color: var(--red);
+    min-height: 24px;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+  
+  .btn-process {
+    display: block;
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 12px;
+    background: var(--primary);
+    color: #fff;
+    font-size: 18px;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-weight: 600;
+    letter-spacing: 1px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px var(--shadow);
+    transition: var(--transition);
+  }
+
+  .btn-process:hover:not(:disabled) {
+    background: var(--primary-mid);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px var(--shadow);
+  }
+
+  .btn-process:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+  
+  #result-section {
+    display: none; 
+    width: 100%;
+  }
+
+  .result-header {
+    margin: 40px 0 20px; 
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 15px; 
+    border-bottom: 2px solid var(--primary-pale); 
+    padding-bottom: 15px;
+  }
+
+  .result-header h2 {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 24px;
+    color: var(--primary);
+    letter-spacing: 1px;
+  }
+
+  .btn-dl {
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: 'Noto Sans TC', sans-serif;
+    cursor: pointer;
+    transition: var(--transition); 
+    display: flex; 
+    align-items: center; 
+    gap: 8px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    box-shadow: 0 3px 10px var(--shadow);
+  }
+
+  .btn-dl:hover {
+    background: var(--primary-mid);
+    transform: translateY(-2px);
+  }
+  
+  .table-wrap {
+    width: 100%; 
+    overflow-x: auto; 
+    margin-bottom: 80px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    background: #fff;
+    box-shadow: 0 4px 20px var(--shadow);
+  }
+
+  thead tr {
+    background: var(--primary);
+    color: #fff;
+  }
+
+  thead th {
+    padding: 14px 10px;
+    text-align: center;
+    border: 1px solid var(--primary-mid);
+    white-space: nowrap;
+    font-weight: 600;
+  }
+
+  tbody tr:nth-child(odd) {
+    background: #fff;
+  }
+
+  tbody tr:nth-child(even) {
+    background: var(--bg-light);
+  }
+
+  tbody tr:hover {
+    background: var(--primary-pale);
+    transition: background .15s;
+  }
+
+  tbody td {
+    padding: 12px 10px;
+    text-align: center;
+    border: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 640px) {
+    .header h1 { font-size: 32px; }
+    .tool-card { padding: 24px; }
+    .result-header { flex-direction: column; align-items: center; text-align: center; }
+  }
+</style>
+</head>
+<body>
+  <main>
+    <a href="index.html" class="back-btn">
+      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+      </svg>
+      返回工具箱
+    </a>
+    <div class="header">
+      <h1>佛學會考人數統計</h1>
+      <p>上傳一或多個報名表 Excel 檔案 · 自動統計各分會報名人數並排序</p>
+    </div>
+
+    <div class="tool-card">
+      <div class="instructions-box">
+        <h3>
+          <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0; color: var(--primary);">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+          </svg>
+          使用說明：
+        </h3>
+        <ul>
+          <li><strong>檔案欄位需求</strong>：上傳之 Excel 檔案內必須有標題為<strong>「分會/團」</strong>之欄位（預設為第 9 欄或 I 欄）。</li>
+          <li><strong>分會名單篩選</strong>：系統會自動篩選並統計蘭陽別院所屬的 21 個指定分會/團，若該分會無人報名，系統會自動<strong>補 0</strong>。</li>
+          <li><strong>排序輸出</strong>：統計結果會依報名人數由大到小排序，並提供預覽與 Excel 下載。</li>
+        </ul>
+      </div>
+
+      <div class="drop-zone" id="drop-zone">
+        <input type="file" accept=".xlsx,.xls" multiple id="file-input" onchange="addFiles(this.files)">
+        <div class="dz-icon">📂</div>
+        <div class="dz-label">點擊選擇或拖曳 Excel 檔案</div>
+        <div class="dz-hint">支援同時上傳多個 Excel 檔案</div>
+      </div>
+      <div class="file-list" id="file-list"></div>
+      <div id="status"></div>
+      <button class="btn-process" id="btn-process" disabled onclick="processFiles()">▶ 開始統計人數</button>
+    </div>
+
+    <div id="result-section">
+      <div class="result-header">
+        <h2>統計結果預覽</h2>
+        <button class="btn-dl" onclick="downloadXLSX()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+          下載統計報表 Excel
+        </button>
+      </div>
+      <div class="table-wrap" id="table-wrap"></div>
+    </div>
+  </main>
+
+<script>
+// ─────────────────────────────────────────────
+//  State & Configurations
+// ─────────────────────────────────────────────
+let files = [];
+let finalStats = []; // Array of { name, count }
+
+const TARGET_BRANCHES = [
+  "宜蘭第三分會",
+  "員山分會",
+  "礁溪分會",
+  "壯圍第一分會",
+  "羅東第二分會",
+  "壯圍第二分會",
+  "宜蘭第四分會",
+  "宜蘭第一分會",
+  "宜蘭第五分會",
+  "宜蘭第六分會",
+  "蘭陽教師分會",
+  "五結分會",
+  "蘇澳分會",
+  "頭城分會",
+  "蘭陽第二分會",
+  "蘭陽第一分會",
+  "羅東第一分會",
+  "金剛第六分會",
+  "宜蘭佛光青年分團",
+  "宜蘭第二分會",
+  "冬山分會"
+];
+
+// ─────────────────────────────────────────────
+//  Drag-drop & File Handling
+// ─────────────────────────────────────────────
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e => { 
+  e.preventDefault(); 
+  dz.classList.add('over'); 
+});
+dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+dz.addEventListener('drop', e => { 
+  e.preventDefault(); 
+  dz.classList.remove('over'); 
+  addFiles(e.dataTransfer.files); 
+});
+
+function addFiles(fileList) {
+  Array.from(fileList).forEach(f => {
+    if (!f.name.endsWith('.xlsx') && !f.name.endsWith('.xls')) {
+      alert(`❌ 檔案「${f.name}」格式不符，必須為 Excel 檔 (.xlsx, .xls)`);
+      return;
+    }
+    if (files.find(x => x.name === f.name)) return;
+    
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+        files.push({ file: f, wb, name: f.name, size: f.size });
+        renderChips(); 
+        updateBtn();
+      } catch (err) {
+        alert(`❌ 讀取檔案「${f.name}」時發生錯誤: ${err.message}`);
+      }
+    };
+    reader.readAsArrayBuffer(f);
+  });
+  document.getElementById('file-input').value = '';
+}
+
+function renderChips() {
+  const list = document.getElementById('file-list');
+  list.innerHTML = '';
+  files.forEach((f, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.innerHTML = `
+      <span>📄 ${f.name} (${formatBytes(f.size)})</span>
+      <button class="remove" onclick="removeFile(${i})">✕</button>
+    `;
+    list.appendChild(chip);
+  });
+}
+
+function removeFile(i) {
+  files.splice(i, 1);
+  renderChips(); 
+  updateBtn();
+  if (!files.length) {
+    document.getElementById('result-section').style.display = 'none';
+  }
+}
+
+function updateBtn() {
+  document.getElementById('btn-process').disabled = files.length === 0;
+}
+
+function formatBytes(bytes) {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+// ─────────────────────────────────────────────
+//  Process Statistics
+// ─────────────────────────────────────────────
+function processFiles() {
+  if (files.length === 0) return;
+  
+  const statusDiv = document.getElementById('status');
+  statusDiv.innerText = "正在統計中...";
+  statusDiv.style.color = "var(--primary)";
+
+  // Initialize counts for all target branches
+  const branchCounts = {};
+  TARGET_BRANCHES.forEach(b => {
+    branchCounts[b] = 0;
+  });
+
+  try {
+    for (let f of files) {
+      const wb = f.wb;
+      for (let sheetName of wb.SheetNames) {
+        const ws = wb.Sheets[sheetName];
+        const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        if (data.length === 0) continue;
+
+        // Find header row (usually row 0, but scan top 5 rows just in case)
+        let colIdx = -1;
+        let startRow = 1;
+        
+        for (let r = 0; r < Math.min(5, data.length); r++) {
+          const row = data[r];
+          for (let c = 0; c < row.length; c++) {
+            if (String(row[c]).trim() === '分會/團') {
+              colIdx = c;
+              startRow = r + 1;
+              break;
+            }
+          }
+          if (colIdx !== -1) break;
+        }
+
+        // Default to column I (index 8) if not found by header name
+        if (colIdx === -1) {
+          colIdx = 8; 
+          startRow = 1;
+        }
+
+        // Count values starting from startRow
+        for (let r = startRow; r < data.length; r++) {
+          const row = data[r];
+          if (row.length <= colIdx) continue;
+          
+          const val = String(row[colIdx]).trim();
+          if (branchCounts.hasOwnProperty(val)) {
+            branchCounts[val]++;
+          }
+        }
+      }
+    }
+
+    // Convert counts to array and sort descending
+    finalStats = Object.keys(branchCounts).map(name => ({
+      name: name,
+      count: branchCounts[name]
+    })).sort((a, b) => b.count - a.count);
+
+    statusDiv.innerText = "統計完成！";
+    statusDiv.style.color = "green";
+
+    renderTable();
+    document.getElementById('result-section').style.display = 'block';
+    
+    // Scroll to results smoothly
+    document.getElementById('result-section').scrollIntoView({ behavior: 'smooth' });
+
+  } catch (err) {
+    console.error(err);
+    statusDiv.innerText = `統計出錯: ${err.message}`;
+    statusDiv.style.color = "var(--red)";
+  }
+}
+
+function renderTable() {
+  const wrap = document.getElementById('table-wrap');
+  
+  const totalCount = finalStats.reduce((sum, item) => sum + item.count, 0);
+  
+  let rowsHtml = finalStats.map((item, index) => `
+    <tr>
+      <td>${index + 1}</td>
+      <td>${item.name}</td>
+      <td><strong>${item.count}</strong> 人</td>
+    </tr>
+  `).join('');
+
+  wrap.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 80px;">排序</th>
+          <th>分會/團</th>
+          <th style="width: 150px;">報名人數</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rowsHtml}
+        <tr style="font-weight: bold; background-color: var(--primary-pale);">
+          <td>-</td>
+          <td>總計</td>
+          <td><strong>${totalCount}</strong> 人</td>
+        </tr>
+      </tbody>
+    </table>
+  `;
+}
+
+// ─────────────────────────────────────────────
+//  Download Excel Output
+// ─────────────────────────────────────────────
+function downloadXLSX() {
+  if (finalStats.length === 0) return;
+
+  // Build rows for sheet
+  const sheetData = [
+    ['分會/團', '報名人數']
+  ];
+  finalStats.forEach(item => {
+    sheetData.push([item.name, item.count]);
+  });
+
+  const totalCount = finalStats.reduce((sum, item) => sum + item.count, 0);
+  sheetData.push(['總計', totalCount]);
+
+  const ws = XLSX.utils.aoa_to_sheet(sheetData);
+
+  // Apply Styles using xlsx-js-style
+  const totalRows = sheetData.length;
+  
+  // Style Definitions
+  const headerStyle = {
+    fill: { patternType: "solid", fgColor: { rgb: "A87A4F" } },
+    font: { name: "微軟正黑體", sz: 11, bold: true, color: { rgb: "FFFFFF" } },
+    alignment: { horizontal: "center", vertical: "center" },
+    border: {
+      top: { style: "thin", color: { rgb: "D4A373" } },
+      bottom: { style: "thin", color: { rgb: "D4A373" } },
+      left: { style: "thin", color: { rgb: "D4A373" } },
+      right: { style: "thin", color: { rgb: "D4A373" } }
+    }
+  };
+
+  const oddRowStyle = {
+    fill: { patternType: "solid", fgColor: { rgb: "FFFFFF" } },
+    font: { name: "微軟正黑體", sz: 11, color: { rgb: "3D2C1B" } },
+    alignment: { horizontal: "center", vertical: "center" },
+    border: {
+      top: { style: "thin", color: { rgb: "E8DCC4" } },
+      bottom: { style: "thin", color: { rgb: "E8DCC4" } },
+      left: { style: "thin", color: { rgb: "E8DCC4" } },
+      right: { style: "thin", color: { rgb: "E8DCC4" } }
+    }
+  };
+
+  const evenRowStyle = {
+    fill: { patternType: "solid", fgColor: { rgb: "FDFAF3" } },
+    font: { name: "微軟正黑體", sz: 11, color: { rgb: "3D2C1B" } },
+    alignment: { horizontal: "center", vertical: "center" },
+    border: {
+      top: { style: "thin", color: { rgb: "E8DCC4" } },
+      bottom: { style: "thin", color: { rgb: "E8DCC4" } },
+      left: { style: "thin", color: { rgb: "E8DCC4" } },
+      right: { style: "thin", color: { rgb: "E8DCC4" } }
+    }
+  };
+
+  const totalRowStyle = {
+    fill: { patternType: "solid", fgColor: { rgb: "E8DCC4" } },
+    font: { name: "微軟正黑體", sz: 11, bold: true, color: { rgb: "3D2C1B" } },
+    alignment: { horizontal: "center", vertical: "center" },
+    border: {
+      top: { style: "thin", color: { rgb: "A87A4F" } },
+      bottom: { style: "double", color: { rgb: "A87A4F" } },
+      left: { style: "thin", color: { rgb: "A87A4F" } },
+      right: { style: "thin", color: { rgb: "A87A4F" } }
+    }
+  };
+
+  // Iterate over all cells in sheet and apply style
+  for (let r = 0; r < totalRows; r++) {
+    for (let c = 0; c < 2; c++) {
+      const cellRef = String.fromCharCode(65 + c) + (r + 1);
+      if (!ws[cellRef]) continue;
+
+      if (r === 0) {
+        ws[cellRef].s = headerStyle;
+      } else if (r === totalRows - 1) {
+        ws[cellRef].s = totalRowStyle;
+      } else {
+        ws[cellRef].s = (r % 2 === 1) ? oddRowStyle : evenRowStyle;
+      }
+    }
+  }
+
+  // Set column widths
+  ws['!cols'] = [
+    { wch: 25 }, // Column A (分會/團)
+    { wch: 15 }  // Column B (報名人數)
+  ];
+
+  // Create workbook & append worksheet
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "會考人數統計");
+
+  // Output filename
+  const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const filename = `佛學會考人數統計_${timestamp}.xlsx`;
+
+  // Download
+  XLSX.writeFile(wb, filename);
+}
+</script>
+</body>
+</html>

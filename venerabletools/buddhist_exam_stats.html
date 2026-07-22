@@ -417,6 +417,31 @@ const TARGET_BRANCHES = [
   "冬山分會"
 ];
 
+// 分會簡寫對照表
+const BRANCH_SHORT_NAMES = {
+  "蘭陽第一分會": "蘭一",
+  "蘭陽第二分會": "蘭二",
+  "宜蘭第二分會": "宜二",
+  "宜蘭第三分會": "宜三",
+  "宜蘭第四分會": "宜四",
+  "宜蘭第五分會": "宜五",
+  "金剛第六分會": "金剛六",
+  "員山分會": "員山",
+  "礁溪分會": "礁溪",
+  "頭城分會": "頭城",
+  "宜蘭佛光青年分團": "青年團",
+  "宜蘭第一分會": "宜一",
+  "宜蘭第六分會": "宜六",
+  "蘇澳分會": "蘇澳",
+  "羅東第一分會": "羅一",
+  "羅東第二分會": "羅二",
+  "壯圍第一分會": "壯一",
+  "壯圍第二分會": "壯二",
+  "五結分會": "五結",
+  "冬山分會": "冬山",
+  "蘭陽教師分會": "教師"
+};
+
 // ─────────────────────────────────────────────
 //  Drag-drop & File Handling
 // ─────────────────────────────────────────────
@@ -552,7 +577,7 @@ function processFiles() {
 
     // Convert counts to array and sort descending
     finalStats = Object.keys(branchCounts).map(name => ({
-      name: name,
+      name: BRANCH_SHORT_NAMES[name] || name,
       count: branchCounts[name]
     })).sort((a, b) => b.count - a.count);
 

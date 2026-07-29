@@ -179,6 +179,38 @@ const COLS_DISPLAY = ['分　會','會　長','輔導法師','日　期','週','
 const COLS_PLAIN   = ['分會','會長','輔導法師','日期','週','時間','地點','上級指導','宣講員'];
 const COL_WIDTHS   = [14, 8, 10, 7, 5, 7, 20, 8, 10]; // chars
 
+// 分會簡稱對照表
+const BRANCH_SHORT_NAMES = {
+  "宜蘭第一分會": "宜一",
+  "宜蘭第二分會": "宜二",
+  "宜蘭第三分會": "宜三",
+  "宜蘭第四分會": "宜四",
+  "宜蘭第五分會": "宜五",
+  "宜蘭第六分會": "宜六",
+  "蘭陽第一分會": "蘭一",
+  "蘭陽第二分會": "蘭二",
+  "羅東第一分會": "羅一",
+  "羅東第二分會": "羅二",
+  "蘇澳分會": "蘇澳",
+  "礁溪分會": "礁溪",
+  "員山分會": "員山",
+  "壯圍第一分會": "壯一",
+  "壯圍第二分會": "壯二",
+  "冬山分會": "冬山",
+  "頭城分會": "頭城",
+  "教師分會": "教師",
+  "蘭陽教師分會": "教師",
+  "五結分會": "五結",
+  "金剛第六分會": "金剛六",
+  "宜蘭佛光青年分團": "青年團"
+};
+
+function shortenBranchName(name) {
+  if (!name) return '';
+  const trimmed = name.trim();
+  return BRANCH_SHORT_NAMES[trimmed] || trimmed;
+}
+
 // ─────────────────────────────────────────────
 //  Drag-drop
 // ─────────────────────────────────────────────
@@ -304,8 +336,9 @@ function parseWorkbook(wb, filename) {
     const rows = [];
     for (let i = dataStart; i < raw.length; i++) {
       const r = raw[i];
-      const branch = String(r[iB]??'').trim();
-      if (!branch || branch === '分會') continue;
+      const rawBranch = String(r[iB]??'').trim();
+      if (!rawBranch || rawBranch === '分會') continue;
+      const branch = shortenBranchName(rawBranch);
 
       let dateStr = '';
       const rd = r[iDt];
